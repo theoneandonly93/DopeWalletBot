@@ -8,12 +8,13 @@ export const supabase = createClient(
 /**
  * Save or update a user's wallet info
  */
-export const upsertUserWallet = async (telegramId, wallet) => {
+export const upsertUserWallet = async (telegramId, wallet, hashedPassword) => {
   const { data, error } = await supabase
     .from("profiles")
     .upsert({
       telegram_id: telegramId,
       wallet_pubkey: wallet.publicKey,
+      password_hash: hashedPassword,
       created_at: new Date().toISOString(),
     })
     .select();
