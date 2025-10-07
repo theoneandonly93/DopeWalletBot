@@ -6,6 +6,7 @@ create table if not exists profiles (
   id uuid primary key default uuid_generate_v4(),
   telegram_id bigint unique,
   wallet_pubkey text unique,
+  password_hash text,
   username text unique,
   display_name text,
   avatar_url text,
@@ -64,15 +65,58 @@ alter table ai_predictions enable row level security;
 alter table token_metrics enable row level security;
 alter table transactions enable row level security;
 
--- Public read access for non-sensitive data
-create policy "Public read profiles" on profiles for select using (true);
-create policy "Public read follows" on follows for select using (true);
-create policy "Public read ai_predictions" on ai_predictions for select using (true);
-create policy "Public read token_metrics" on token_metrics for select using (true);
 
--- Insert/update only by server key (backend)
-create policy "Server insert profiles" on profiles for insert with check (auth.role() = 'service_role');
-create policy "Server insert follows" on follows for insert with check (auth.role() = 'service_role');
-create policy "Server insert ai_predictions" on ai_predictions for insert with check (auth.role() = 'service_role');
-create policy "Server insert token_metrics" on token_metrics for insert with check (auth.role() = 'service_role');
-create policy "Server insert transactions" on transactions for insert with check (auth.role() = 'service_role');
+-- Public read access for non-sensitive data (create only if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read profiles' AND tablename = 'profiles'
+  ) THEN
+    EXECUTE 'create policy "Public read profiles" on profiles for select using (true)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read follows' AND tablename = 'follows'
+  ) THEN
+    EXECUTE 'create policy "Public read follows" on follows for select using (true)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read ai_predictions' AND tablename = 'ai_predictions'
+  ) THEN
+    EXECUTE 'create policy "Public read ai_predictions" on ai_predictions for select using (true)';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Public read token_metrics' AND tablename = 'token_metrics'
+  ) THEN
+    EXECUTE 'create policy "Public read token_metrics" on token_metrics for select using (true)';
+  END IF;
+END $$;
+
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Server insert profiles' AND tablename = 'profiles'
+  ) THEN
+    EXECUTE 'create policy "Server insert profiles" on profiles for insert with check (auth.role() = ''service_role'')';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Server insert follows' AND tablename = 'follows'
+  ) THEN
+    EXECUTE 'create policy "Server insert follows" on follows for insert with check (auth.role() = ''service_role'')';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Server insert ai_predictions' AND tablename = 'ai_predictions'
+  ) THEN
+    EXECUTE 'create policy "Server insert ai_predictions" on ai_predictions for insert with check (auth.role() = ''service_role'')';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Server insert token_metrics' AND tablename = 'token_metrics'
+  ) THEN
+    EXECUTE 'create policy "Server insert token_metrics" on token_metrics for insert with check (auth.role() = ''service_role'')';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Server insert transactions' AND tablename = 'transactions'
+  ) THEN
+    EXECUTE 'create policy "Server insert transactions" on transactions for insert with check (auth.role() = ''service_role'')';
+  END IF;
+END $$;
