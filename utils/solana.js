@@ -42,16 +42,25 @@ export const createWallet = async () => {
   // creation still works without a mnemonic. Returning a null mnemonic
   // signals the fallback to callers.
   try {
-    const bip39 = await import('bip39');
-    const { mnemonicToSeedSync, generateMnemonic } = bip39;
-    const mnemonic = generateMnemonic();
-    const seed = mnemonicToSeedSync(mnemonic).slice(0, 32);
-    const keypair = Keypair.fromSeed(seed);
-    return {
-      mnemonic,
-      privateKey: bs58.encode(keypair.secretKey),
-      publicKey: keypair.publicKey.toBase58(),
-    };
+    // Only attempt to load bip39 in a server (Node) environment. Avoid
+    // importing in the browser or during client-side bundling.
+    if (typeof window === 'undefined') {
+      // Use an indirect dynamic import to reduce the chance bundlers will
+      // statically analyze and try to resolve 'bip39' at build time.
+      // eslint-disable-next-line no-new-func
+      const dynamicImport = new Function('specifier', 'return import(specifier)');
+      const bip39 = await dynamicImport('bip39');
+      const { mnemonicToSeedSync, generateMnemonic } = bip39;
+      const mnemonic = generateMnemonic();
+      const seed = mnemonicToSeedSync(mnemonic).slice(0, 32);
+      const keypair = Keypair.fromSeed(seed);
+      return {
+        mnemonic,
+        privateKey: bs58.encode(keypair.secretKey),
+        publicKey: keypair.publicKey.toBase58(),
+      };
+    }
+    // If in browser, skip bip39 and fall through to fallback.
   } catch (err) {
     // If bip39 import or usage fails, produce a secure random seed and
     // derive a Solana keypair from it. This avoids hard failures when the
