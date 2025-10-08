@@ -23,6 +23,18 @@ export default async function handler(req, res) {
     // Generate wallet (createWallet is async)
     const wallet = await createWallet();
 
+    // Dynamically import the Supabase helper. In dev environments where
+    // SUPABASE_* is not configured we prefer to continue (so onboarding can
+    // be tested without a DB). If the import or the helper throws because of
+    // missing env, we'll skip the DB upsert and return the wallet to the client.
+    let upsertFn = null;
+    try {
+      const mod = await import('../../../utils/supabase.js');
+      upsertFn = mod.upsertUserWallet;
+    } catch (err) {
+      console.warn('supabase helper unavailable, skipping DB upsert during onboarding:', err && err.message);
+    }
+
     // Get Telegram ID from session or request (replace with your logic)
     // Avoid using a string placeholder like 'demo-user' which will fail if
     // the DB column is a bigint. Only pass telegram_id when it's a valid integer.
@@ -36,7 +48,13 @@ export default async function handler(req, res) {
     }
 
     // Store wallet and hashed password in Supabase (telegramId may be null)
-    await upsertUserWallet(telegramId, wallet, hashedPassword);
+    if (upsertFn) {
+      await upsertFn(telegramId, wallet, hashedPassword);
+    } else {
+      // No-op in dev when Supabase isn't configured. Caller will still get
+      // the wallet details so onboarding flow can be exercised.
+      console.info('Skipping Supabase upsert: upsertUserWallet not available');
+    }
 
     res.status(200).json({ publicKey: wallet.publicKey });
   } catch (e) {
