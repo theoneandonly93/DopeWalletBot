@@ -50,16 +50,17 @@ export default function BottomNav(){
       e?.preventDefault?.();
       try { r.push(href); } catch (err) { /* fallback */ window.location.href = href; }
     };
+    // note: avoid navigating on touchstart to prevent accidental taps while scrolling on mobile
     const handleTouch = (e) => {
-      // ensure immediate navigation on touch devices
+      // use touchend for reliable taps on mobile
       try { r.push(href); } catch (err) { window.location.href = href; }
     };
     return (
-      <div
+        <div
         role="button"
         tabIndex={0}
         onClick={handleNav}
-        onTouchStart={handleTouch}
+        onTouchEnd={handleTouch}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNav(); } }}
         className={`flex flex-col items-center text-xs px-3 py-3 touch-manipulation w-20 ${active?"text-white":"text-textDim"} cursor-pointer`}
       >

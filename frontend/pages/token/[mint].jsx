@@ -1,8 +1,42 @@
 // Clean server-side token detail page
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function TokenDetailPage({ token, mint }) {
-  if (!token) {
+  const [clientToken, setClientToken] = useState(token || null);
+
+  // If SSR returned null, try to fetch client-side (useful for client navigation / mobile)
+  useEffect(() => {
+    if (clientToken) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const envBase = process.env.NEXT_PUBLIC_BASE_URL || '';
+        const defaultPort = process.env.PORT || 3000;
+        const root = envBase ? String(envBase).replace(/\/+$/,'') : `http://localhost:${defaultPort}`;
+        const chains = ['solana','bsc'];
+        for (const c of chains){
+          // prefer relative path (same-origin) for client-side fetches, fallback to absolute root
+          const rel = `/api/dex/trending?chain=${c}&limit=500`;
+          const abs = `${root}/api/dex/trending?chain=${c}&limit=500`;
+          const url = typeof window !== 'undefined' ? rel : abs;
+          try {
+            const r = await fetch(url);
+            if (!r.ok) continue;
+            const body = await r.json();
+            const list = body?.data || [];
+            const found = list.find((it) => (it.address || '').toString().toLowerCase() === String(mint).toLowerCase());
+            if (found && mounted) { setClientToken({ name: found.name, symbol: found.symbol, logoURI: found.logoURI, address: found.address, price: found.price }); break; }
+          } catch (e) { continue; }
+        }
+      } catch (e) { /* ignore */ }
+    })();
+    return () => { mounted = false; };
+  }, [clientToken, mint]);
+
+  const activeToken = clientToken || token;
+
+  if (!activeToken) {
     const isSol = !(mint || '').toString().startsWith('0x');
     const explorer = isSol ? `https://solscan.io/token/${mint}` : `https://bscscan.com/token/${mint}`;
     return (
@@ -30,13 +64,13 @@ export default function TokenDetailPage({ token, mint }) {
       <div className="p-4 space-y-4">
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-semibold">{token.symbol || token.name}</h2>
-            <p className="text-3xl font-bold">${Number(value || 0).toFixed(2)}</p>
-            <p className={`text-sm ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {change >= 0 ? '+' : ''}{Number(change || 0).toFixed(2)}%
+            <h2 className="text-2xl font-semibold">{activeToken.symbol || activeToken.name}</h2>
+            <p className="text-3xl font-bold">${Number(activeToken.price || 0).toFixed(2)}</p>
+            <p className={`text-sm ${((activeToken.priceChange24h ?? activeToken.change_24h) || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {((activeToken.priceChange24h ?? activeToken.change_24h) || 0) >= 0 ? '+' : ''}{Number((activeToken.priceChange24h ?? activeToken.change_24h) || 0).toFixed(2)}%
             </p>
           </div>
-          <img src={token.logoURI || token.logo || '/logo-512.png'} className="w-14 h-14 rounded-full" alt={token.symbol} />
+          <img src={activeToken.logoURI || activeToken.logo || '/logo-512.png'} className="w-14 h-14 rounded-full" alt={activeToken.symbol} />
         </div>
 
         <div className="bg-[#0D0D0D] rounded-2xl p-3">
@@ -46,7 +80,7 @@ export default function TokenDetailPage({ token, mint }) {
 
         <div className="bg-[#111] rounded-2xl border border-[#222] p-4 space-y-3">
           <h3 className="text-sm font-semibold text-textDim">OVERVIEW</h3>
-          <div className="flex justify-between text-sm"><span>Market Cap</span><span>${(token.marketCap || token.market_cap || 0).toLocaleString()}</span></div>
+          <div className="flex justify-between text-sm"><span>Market Cap</span><span>${((activeToken.marketCap || activeToken.market_cap) || 0).toLocaleString()}</span></div>
         </div>
       </div>
 

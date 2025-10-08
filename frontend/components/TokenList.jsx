@@ -66,7 +66,7 @@ export default function TokenList({ tokens = [], chain = 'solana' }) {
 
     if (href) {
       return (
-        <Link key={target || displaySymbol} href={href} className="w-full">
+        <Link key={target || displaySymbol} href={href} className="w-full block">
           {row}
         </Link>
       );
