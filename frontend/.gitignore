@@ -1,0 +1,6 @@
+# Ignore Next.js build output
+.next/
+node_modules/
+.env.local
+.env.development
+.env.production
