@@ -16,6 +16,7 @@ export default function Home() {
   const [showDeposit, setShowDeposit] = useState(false);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     try { readyTelegram(); } catch (e) { /* ignore */ }
@@ -55,6 +56,32 @@ export default function Home() {
     window.addEventListener('storage', onStorage);
     return () => { mounted = false; window.removeEventListener('dopewallet:signin', onSignin); window.removeEventListener('storage', onStorage); };
   }, []);
+
+  // Fetch balances and tokens when vault is available
+  useEffect(() => {
+    if (!vault) return;
+    let mounted = true;
+    async function fetchBalances() {
+      try {
+        const resp = await fetch('/api/balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey: vault.pubkey }),
+        });
+        if (!resp.ok) throw new Error('balance api error');
+        const body = await resp.json();
+        if (mounted) {
+          setBalance(body.sol ?? null);
+          setUsdBalance(body.usdBalance ?? null);
+          setTokens(body.tokens ?? []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch balances', err);
+      }
+    }
+    fetchBalances();
+    return () => { mounted = false; };
+  }, [vault]);
 
   async function handleNewWallet() {
     const v = await createWallet();
@@ -175,31 +202,56 @@ export default function Home() {
         <div className="flex-1 w-full max-w-3xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
             <div className="text-sm text-textDim">Address</div>
-            <div className="font-mono text-sm text-white break-words mx-auto max-w-lg">{vault.pubkey}</div>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(vault.pubkey);
+                    setToast('Address copied to clipboard');
+                    setTimeout(() => setToast(null), 1800);
+                  } catch (e) {
+                    console.error('copy failed', e);
+                    setToast('Copy failed');
+                    setTimeout(() => setToast(null), 1800);
+                  }
+                }}
+                className="font-mono text-sm text-white/80 font-semibold break-words mx-auto max-w-lg text-left hover:underline cursor-pointer"
+                aria-label="Copy address"
+              >
+                {vault.pubkey}
+              </button>
+            </div>
           </div>
+
+          {/* Toast */}
+          {toast && (
+            <div className="fixed right-4 bottom-24 z-50">
+              <div className="bg-black/80 text-white text-sm px-3 py-2 rounded-md shadow-lg">{toast}</div>
+            </div>
+          )}
 
           <div className="text-center mb-4">
             <div className="text-sm text-textDim">USD Value</div>
             <div className="text-3xl font-extrabold text-white">{usdBalance !== null ? `$${usdBalance}` : '$0.00'}</div>
-            <div className="text-7xl font-extrabold text-white mt-1 tracking-tight">{balance !== null ? `${balance} SOL` : '—'}</div>
+            {/* SOL display removed per design — show USD only */}
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <button onClick={() => setShowDeposit(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+            <button onClick={() => setShowDeposit(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v8m-4-4h8" />
               </svg>
               <div>Deposit</div>
             </button>
 
-            <button onClick={() => setShowTransfer(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+            <button onClick={() => setShowTransfer(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 19v.01M5 12h.01M19 12h.01M6.2 6.2l.01.01M17.8 17.8l.01.01M6.2 17.8l.01.01M17.8 6.2l.01.01" />
               </svg>
               <div>Transfer</div>
             </button>
 
-            <button onClick={() => setShowWithdraw(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+            <button onClick={() => setShowWithdraw(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a4 4 0 00-4-4H7a4 4 0 00-4 4v2" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 13v4a2 2 0 002 2h6a2 2 0 002-2v-4" />
@@ -208,17 +260,23 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="bg-card rounded-xl border border-line p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="font-semibold">Token Holdings</div>
-              <div className="text-xs text-textDim">{tokens.length} tokens</div>
+          <div className="mt-12" />
+
+          <div className="mb-2">
+            <div className="ml-4">
+              <span className="inline-block bg-bg border border-line text-xs px-3 py-0.5 rounded-full">Token Holdings</span>
             </div>
-            <div className="space-y-2">
+            <div className="bg-card rounded-xl border border-line p-6 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div />
+                <div className="text-xs text-textDim">{tokens.length} tokens</div>
+              </div>
+              <div className="space-y-2">
               {tokens.length === 0 && (
                 <div className="text-textDim text-sm">No tokens found. Your SOL balance and tokens will appear here.</div>
               )}
               {tokens.map((t) => (
-                <div key={t.mint || t.address} className="flex items-center justify-between bg-[#0b0b0d] rounded-lg p-2">
+                <div key={t.mint || t.address} className="flex items-center justify-between bg-[#0b0b0d] rounded-lg p-2 hover:bg-[#0f0f11] transition">
                   <div className="flex items-center space-x-3">
                     <img src={t.logoURI || '/token-placeholder.png'} alt={t.symbol} className="w-8 h-8 rounded-full" />
                     <div>
@@ -234,10 +292,15 @@ export default function Home() {
               ))}
             </div>
           </div>
+        </div>
 
-          <div className="bg-card rounded-xl p-4">
-            <div className="font-semibold mb-2">Activity</div>
-            <div className="text-textDim text-sm">Recent transfers, swaps, and deposits will show here.</div>
+          <div className="mt-4 mb-2">
+            <div className="ml-4">
+              <span className="inline-block bg-bg border border-line text-xs px-3 py-0.5 rounded-full">Activity</span>
+            </div>
+            <div className="bg-card rounded-xl p-6">
+              <div className="text-textDim text-sm">Recent transfers, swaps, and deposits will show here.</div>
+            </div>
           </div>
 
           {/* Deposit Modal */}

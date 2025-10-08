@@ -1,18 +1,20 @@
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
 export default function BottomNav(){
   const r = useRouter();
-  const tab = r.pathname === '/' || r.pathname.startsWith("/profile")
-    ? "wallet"
-    : r.pathname.startsWith("/swap")
-    ? "swap"
-    : r.pathname.startsWith("/earn")
-    ? "earn"
-    : r.pathname.startsWith("/browser")
-    ? "browser"
-    : "wallet";
+  const path = r.pathname || '/';
+  const tab = path === '/'
+    ? 'wallet'
+    : path.startsWith('/profile')
+    ? 'profile'
+    : path.startsWith('/swap')
+    ? 'swap'
+    : path.startsWith('/earn')
+    ? 'earn'
+    : path.startsWith('/browser')
+    ? 'browser'
+    : 'wallet';
   const Icon = ({name, active}) => {
     const stroke = active ? 'white' : 'rgba(255,255,255,0.6)';
     const size = 18;
@@ -43,14 +45,27 @@ export default function BottomNav(){
     );
   };
 
-  const Item = ({href,label,active}) => (
-    <Link href={href} className={`flex flex-col items-center text-xs ${active?"text-white":"text-textDim"}`}>
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${active?"bg-accent/20":"bg-[#171717]"}`}>
-        <Icon name={label} active={active} />
+  const Item = ({ href, label, active }) => {
+    const handleNav = (e) => {
+      e?.preventDefault?.();
+      try { r.push(href); } catch (err) { /* ignore */ }
+    };
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleNav}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNav(); } }}
+        className={`flex flex-col items-center text-xs px-3 py-3 touch-manipulation w-20 ${active?"text-white":"text-textDim"} cursor-pointer`}
+      >
+        {/* Removed circular bg container so icon is shown inline without a rounded background */}
+        <div className="flex items-center justify-center p-0">
+          <Icon name={label} active={active} />
+        </div>
+        <div className="mt-1 text-[11px] select-none">{label}</div>
       </div>
-      <div className="mt-1">{label}</div>
-    </Link>
-  );
+    );
+  };
   // Wallet button should open the DopeWallet home page (root), which is the wallet UI.
   const walletHref = '/';
 
