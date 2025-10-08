@@ -42,6 +42,15 @@ export default function TelegramWebApp() {
       if (!res.ok) throw new Error(j.error || 'create failed');
       setStatus('wallet-created');
       setWallet(j.wallet);
+      // Store keys locally for this WebApp session. If mnemonic is null,
+      // show a strong warning so users know they must back up the private key.
+      try {
+        if (j.wallet.privateKey) localStorage.setItem('privateKey', j.wallet.privateKey);
+        if (j.wallet.mnemonic) localStorage.setItem('mnemonic', j.wallet.mnemonic);
+        else localStorage.removeItem('mnemonic');
+      } catch (e) {
+        console.warn('Could not access localStorage to save keys', e && e.message);
+      }
     } catch (e) {
       setStatus('error:' + (e.message || e));
     }
@@ -80,6 +89,11 @@ export default function TelegramWebApp() {
       {wallet && (
         <div className="mt-4 bg-gray-900 p-3 rounded">
           <div>Public Key: {wallet.publicKey}</div>
+          {wallet.mnemonic === null && (
+            <div className="mt-3 p-3 bg-red-800 text-yellow-200 rounded">
+              <strong>Important:</strong> A secure mnemonic could not be generated. You must copy and securely save your private key now — this wallet has no recovery phrase.
+            </div>
+          )}
         </div>
       )}
 

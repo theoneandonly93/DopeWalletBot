@@ -1,4 +1,3 @@
-import { createWallet } from '../../../utils/solana';
 import { upsertUserWallet } from '../../../utils/supabase';
 import bcrypt from 'bcryptjs';
 
@@ -16,8 +15,13 @@ export default async function handler(req, res) {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Generate wallet (createWallet is async now)
-  const wallet = await createWallet();
+    // Dynamically import createWallet at runtime to avoid bundling bip39
+    // (when Next.js compiles frontend code it can attempt to include server-only
+    // modules if they're imported at module scope). Importing here ensures
+    // bip39 and other node-only libs are only required on the server at runtime.
+    const { createWallet } = await import('../../../utils/solana.js');
+    // Generate wallet (createWallet is async)
+    const wallet = await createWallet();
 
     // Get Telegram ID from session or request (replace with your logic)
     // Avoid using a string placeholder like 'demo-user' which will fail if

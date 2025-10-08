@@ -36,7 +36,11 @@ export default function Profile() {
   const handleRevealKeys = () => {
     const priv = localStorage.getItem("privateKey");
     const mnemonic = localStorage.getItem("mnemonic");
-    alert(`🔑 Private Key:\n${priv}\n\n🪶 Seed Phrase:\n${mnemonic}`);
+    if (!mnemonic) {
+      alert(`⚠️ WARNING: No seed phrase available for this wallet. Save your private key now.\n\n🔑 Private Key:\n${priv}`);
+    } else {
+      alert(`🔑 Private Key:\n${priv}\n\n🪶 Seed Phrase:\n${mnemonic}`);
+    }
   };
 
   const toggleNetwork = () => {
