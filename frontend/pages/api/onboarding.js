@@ -16,8 +16,8 @@ export default async function handler(req, res) {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate wallet
-    const wallet = createWallet();
+  // Generate wallet (createWallet is async now)
+  const wallet = await createWallet();
 
     // Get Telegram ID from session or request (replace with your logic)
     // Avoid using a string placeholder like 'demo-user' which will fail if

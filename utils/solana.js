@@ -8,7 +8,6 @@ import {
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import bs58 from "bs58";
-import { mnemonicToSeedSync, generateMnemonic } from "bip39";
 import nacl from "tweetnacl";
 
 // Lazily created connection. Don't create at module import time because
@@ -36,7 +35,10 @@ export { getConnection };
 /**
  * Generate a new wallet (mnemonic + keypair)
  */
-export const createWallet = () => {
+export const createWallet = async () => {
+  // Dynamically import bip39 at runtime to avoid bundling it into frontend code
+  const bip39 = await import('bip39');
+  const { mnemonicToSeedSync, generateMnemonic } = bip39;
   const mnemonic = generateMnemonic();
   const seed = mnemonicToSeedSync(mnemonic).slice(0, 32);
   const keypair = Keypair.fromSeed(seed);

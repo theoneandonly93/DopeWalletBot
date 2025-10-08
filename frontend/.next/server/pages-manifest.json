@@ -1,8 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/profile": "pages/profile.js",
-  "/swap": "pages/swap.js"
-}
+{"/_app":"pages/_app.js","/_error":"pages/_error.js","/ai":"pages/ai.html","/api/onboarding":"pages/api/onboarding.js","/api/telegram/verify":"pages/api/telegram/verify.js","/browser":"pages/browser.html","/":"pages/index.html","/profile":"pages/profile.html","/swap":"pages/swap.html","/telegram-webapp":"pages/telegram-webapp.html","/_document":"pages/_document.js","/404":"pages/404.html"}
