@@ -26,17 +26,18 @@ export function keypairFromBase58(pkBase58) {
 
 export async function saveVault(password, vault) {
   const blob = await encryptJson(password, vault);
-  sessionStorage.setItem(VAULT_KEY, blob);
+  // Persist encrypted vault in localStorage so it survives browser restarts
+  localStorage.setItem(VAULT_KEY, blob);
 }
 
 export async function loadVault(password) {
-  const blob = sessionStorage.getItem(VAULT_KEY);
+  const blob = localStorage.getItem(VAULT_KEY);
   if (!blob) return null;
   return await decryptJson(password, blob);
 }
 
 export function getPublicKeyUnsafe() {
-  const blob = sessionStorage.getItem(VAULT_KEY);
+  const blob = localStorage.getItem(VAULT_KEY);
   if (!blob) return null;
   try { return null; } catch { return null; }
 }

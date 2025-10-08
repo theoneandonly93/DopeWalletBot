@@ -12,7 +12,10 @@ export default function TokenDetail() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (mint) fetchToken();
+    if (mint) {
+      console.log('TokenDetail load mint=', mint);
+      fetchToken();
+    }
   }, [mint]);
 
   async function fetchToken() {
@@ -22,13 +25,23 @@ export default function TokenDetail() {
       const res = await fetch(`https://public-api.birdeye.so/public/token_price?address=${mint}`, {
         headers: key ? { 'X-API-KEY': key } : {},
       });
+      if (!res.ok) {
+        console.error('token_price fetch failed', res.status, await res.text());
+        setToken(null);
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
+
       const infoRes = await fetch(`https://public-api.birdeye.so/public/token_meta?address=${mint}`, {
         headers: key ? { 'X-API-KEY': key } : {},
       });
+      if (!infoRes.ok) {
+        console.error('token_meta fetch failed', infoRes.status, await infoRes.text());
+      }
       const info = await infoRes.json();
       const merged = { ...(data?.data || {}), ...(info?.data || {}) };
-      setToken(merged);
+      setToken(merged || {});
       setLoading(false);
     } catch (err) {
       console.error(err);
@@ -110,7 +123,7 @@ export default function TokenDetail() {
         {/* Explorer */}
         <div className="bg-[#111] rounded-2xl border border-[#222] p-4">
           <h3 className="text-sm font-semibold text-textDim mb-2">RESOURCES</h3>
-          <Link href={`https://solscan.io/token/${mint}`} target="_blank" className="text-[#3B82F6] text-sm">View Details in Explorer</Link>
+          <a href={`https://solscan.io/token/${mint}`} target="_blank" rel="noopener noreferrer" className="text-[#3B82F6] text-sm">View Details in Explorer</a>
         </div>
       </div>
 

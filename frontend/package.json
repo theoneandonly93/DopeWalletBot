@@ -27,6 +27,14 @@
     "react-dom": "18.3.1",
     "tailwindcss": "^3.4.1"
   },
+  "dependenciesMeta": {
+    "ethers": {
+      "optional": false
+    }
+  },
+  "optionalDependencies": {
+    "ethers": "^6.15.0"
+  },
   "devDependencies": {
     "autoprefixer": "^10.4.21"
   }

@@ -10,7 +10,7 @@ export default function ProfileNew(){
   const [followers, setFollowers] = useState(23);
   const [following, setFollowing] = useState(12);
 
-  useEffect(()=>{ (async()=>{ const pw = sessionStorage.getItem("DW_LAST_PW"); if (pw) { const v = await loadVault(pw); setVault(v); if (v?.pubkey) setPortfolio(await getPortfolio(v.pubkey)); } })(); },[]);
+  useEffect(()=>{ (async()=>{ const pw = localStorage.getItem("DW_LAST_PW"); if (pw) { const v = await loadVault(pw); setVault(v); if (v?.pubkey) setPortfolio(await getPortfolio(v.pubkey)); } })(); },[]);
 
   return (
     <div className="min-h-screen bg-bg text-white pb-24">

@@ -32,7 +32,7 @@ export default function Profile() {
 
   useEffect(() => {
     (async () => {
-      const pw = sessionStorage.getItem("DW_LAST_PW");
+  const pw = localStorage.getItem("DW_LAST_PW");
       if (pw) {
         const v = await loadVault(pw);
         setVault(v);
@@ -129,7 +129,7 @@ export default function Profile() {
 
   useEffect(() => {
     (async () => {
-      const pw = sessionStorage.getItem("DW_LAST_PW");
+      const pw = localStorage.getItem("DW_LAST_PW");
       if (pw) {
         const v = await loadVault(pw);
         setVault(v);

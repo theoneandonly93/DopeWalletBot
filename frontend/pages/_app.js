@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import Onboarding from '../components/Onboarding';
 import Splash from '../components/Splash';
 import { useRouter } from 'next/router';
+// Chart.js registration for react-chartjs-2
+import { Chart, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, TimeScale } from 'chart.js';
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, TimeScale);
 
 export default function App({ Component, pageProps }) {
   const [showOnboarding, setShowOnboarding] = useState(() => {

@@ -13,6 +13,7 @@ const SOL_TOKENLIST = 'https://raw.githubusercontent.com/solana-labs/token-list/
 
 const CACHE = { responses: {}, tokenlist: null, tokenlistTs: 0, logoMap: null };
 const CG_CACHE = { list: null, listTs: 0, prices: {}, pricesTs: {} };
+CG_CACHE.meta = {};
 const COINGECKO_LIST_TTL = 1000 * 60 * 60; // 1h
 const COINGECKO_PRICE_TTL = 1000 * 30; // 30s
 
@@ -78,6 +79,61 @@ async function getPriceFromCoinGecko(symbol, contractAddress) {
     }
   } catch (e) { /* ignore */ }
   return null;
+}
+
+// Attempt to fetch authoritative token metadata (name/symbol) from CoinGecko
+async function getCoinGeckoMeta(chain, contractAddress, fallbackSymbol) {
+  try {
+    const now = Date.now();
+    const key = `${chain}:${(contractAddress||'').toLowerCase()}`;
+    if (CG_CACHE.meta[key] && (now - (CG_CACHE.meta[key].ts || 0)) < 1000 * 60 * 10) {
+      return CG_CACHE.meta[key].data;
+    }
+
+    const platformMap = {
+      solana: 'solana',
+      bsc: 'binance-smart-chain',
+      bscscan: 'binance-smart-chain',
+      ethereum: 'ethereum',
+      polygon: 'polygon-pos',
+      fantom: 'fantom',
+    };
+    const platform = platformMap[chain] || chain;
+
+    // Try contract lookup (works for many supported platforms)
+    if (contractAddress) {
+      try {
+        const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(platform)}/contract/${encodeURIComponent(contractAddress)}`;
+        const r = await fetch(url);
+        if (r.ok) {
+          const j = await r.json();
+          const data = { name: j.name || null, symbol: j.symbol || null };
+          CG_CACHE.meta[key] = { ts: Date.now(), data };
+          return data;
+        }
+      } catch (e) { /* ignore contract lookup errors */ }
+    }
+
+    // Fallback: map by symbol -> id list and fetch simple coin data
+    const list = await loadCoinGeckoList();
+    if (list && fallbackSymbol) {
+      const id = list[String(fallbackSymbol).toUpperCase()];
+      if (id) {
+        try {
+          const r2 = await fetch(`https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}`);
+          if (r2.ok) {
+            const j2 = await r2.json();
+            const data = { name: j2.name || null, symbol: j2.symbol || null };
+            CG_CACHE.meta[key] = { ts: Date.now(), data };
+            return data;
+          }
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    CG_CACHE.meta[key] = { ts: Date.now(), data: { name: null, symbol: null } };
+  } catch (e) { /* ignore */ }
+  return { name: null, symbol: null };
 }
 
 async function loadTokenList() {
@@ -181,7 +237,10 @@ export default async function handler(req, res) {
 
     const tokenlist = await loadTokenList();
 
-    const normalized = (sorted || []).slice(0, limit).map((it) => {
+    const rawSlice = (sorted || []).slice(0, limit);
+    const normalized = [];
+    // Build initial normalized entries (without async enrichment)
+    for (const it of rawSlice) {
       const address = it.tokenAddress || it.address || it.pairAddress || it.baseToken?.address || it.quoteToken?.address || it.id || '';
       let logoURI = it.icon || it.logo || it.logoURI || it.tokenIcon || it.baseToken?.icon || it.quoteToken?.icon || '';
       let symbol = it.symbol || it.tokenSymbol || it.token?.symbol || it.baseToken?.symbol || it.quoteToken?.symbol || it.name || '';
@@ -231,11 +290,45 @@ export default async function handler(req, res) {
         return alpha.toUpperCase().slice(0, 6);
       }
 
-      const guessedName = name || it.raw?.description || rawDesc || urlName || '';
-      const guessedSymbol = symbol || guessFromText(symbol || name || rawDesc || urlName || address) || '';
+      const initialName = name || '';
+      const initialSymbol = symbol || '';
 
-      return { address, logoURI, symbol: guessedSymbol, name: guessedName, price, change24h, volume24h, raw: it };
-    });
+      normalized.push({ address, logoURI, symbol: initialSymbol, name: initialName, price, change24h, volume24h, raw: it });
+    }
+
+    // Enrich entries with authoritative metadata from CoinGecko when possible (sequential to avoid API rate limits)
+    for (const entry of normalized) {
+      try {
+        const lookupAddr = String(entry.address || '').toLowerCase();
+        let cgMeta = { name: null, symbol: null };
+
+        // prefer tokenlist metadata already merged earlier (entry may have logoURI indicating tokenlist match)
+        if ((!entry.name || !entry.symbol) && lookupAddr && tokenlist && tokenlist[lookupAddr]) {
+          const m = tokenlist[lookupAddr];
+          if (m) {
+            entry.name = entry.name || m.name || m.symbol || '';
+            entry.symbol = entry.symbol || m.symbol || m.name || '';
+            continue; // authoritative from tokenlist
+          }
+        }
+
+        // Try CoinGecko contract lookup
+        if ((!entry.name || !entry.symbol) && entry.address) {
+          cgMeta = await getCoinGeckoMeta(chain, entry.address, entry.symbol || entry.name);
+          if (cgMeta) {
+            if (cgMeta.name) entry.name = entry.name || cgMeta.name;
+            if (cgMeta.symbol) entry.symbol = entry.symbol || cgMeta.symbol.toUpperCase();
+            if (entry.name && entry.symbol) continue;
+          }
+        }
+
+        // As a last resort, if still empty, use heuristics but keep them only if nothing authoritative found
+        if (!entry.symbol) entry.symbol = (entry.name && entry.name.length <= 10) ? entry.name.toUpperCase().split(' ')[0] : (entry.address ? `${String(entry.address).slice(0,4)}...` : '');
+        if (!entry.name) entry.name = entry.raw?.name || entry.raw?.tokenName || entry.raw?.description || '';
+      } catch (e) {
+        // ignore per-entry failures
+      }
+  }
 
     CACHE.responses[cacheKey] = { ts: Date.now(), data: normalized };
     return res.status(200).json({ data: normalized, cached: false });

@@ -17,6 +17,7 @@ export default function Home() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [toast, setToast] = useState(null);
+  const [chain, setChain] = useState('solana');
 
   useEffect(() => {
     try { readyTelegram(); } catch (e) { /* ignore */ }
@@ -27,9 +28,9 @@ export default function Home() {
     let mounted = true;
     async function tryLoadSaved() {
       try {
-        const lastPw = sessionStorage.getItem('DW_LAST_PW');
+  const lastPw = localStorage.getItem('DW_LAST_PW');
         const signed = localStorage.getItem('dopewallet_signedin');
-        const blob = sessionStorage.getItem('DW_VAULT_V1');
+  const blob = localStorage.getItem('DW_VAULT_V1');
         if (!blob) return;
         // If we have a cached password, attempt to decrypt and set the vault so the wallet view shows.
         if (lastPw) {
@@ -95,7 +96,7 @@ export default function Home() {
     if (!pass1 || pass1 !== pass2) return alert('Passwords must match');
     if (!tempVault) return;
     await saveVault(pass1, tempVault);
-    sessionStorage.setItem('DW_LAST_PW', pass1);
+  localStorage.setItem('DW_LAST_PW', pass1);
     setVault(tempVault);
     setStage('choose');
     // Mark user as signed in and notify app to hide onboarding
@@ -262,8 +263,12 @@ export default function Home() {
           <div className="mt-12" />
 
           <div className="mb-2">
-            <div className="ml-4">
+            <div className="ml-4 flex items-center justify-between">
               <span className="inline-block bg-bg border border-line text-xs px-3 py-0.5 rounded-full">Token Holdings</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setChain('solana')} className={`btn btn-sm ${chain === 'solana' ? 'btn-primary' : 'btn-ghost'}`}>Solana</button>
+                <button onClick={() => setChain('bsc')} className={`btn btn-sm ${chain === 'bsc' ? 'btn-primary' : 'btn-ghost'}`}>BSC</button>
+              </div>
             </div>
             <div className="bg-card rounded-xl border border-line p-6 mb-4">
               <div className="flex items-center justify-between mb-3">
@@ -274,21 +279,48 @@ export default function Home() {
               {tokens.length === 0 && (
                 <div className="text-textDim text-sm">No tokens found. Your SOL balance and tokens will appear here.</div>
               )}
-              {tokens.map((t) => (
-                <div key={t.mint || t.address} className="flex items-center justify-between bg-[#0b0b0d] rounded-lg p-2 hover:bg-[#0f0f11] transition">
-                  <div className="flex items-center space-x-3">
-                    <img src={t.logoURI || '/token-placeholder.png'} alt={t.symbol} className="w-8 h-8 rounded-full" />
-                    <div>
-                      <div className="text-sm font-medium">{t.symbol || t.name}</div>
-                      <div className="text-xs text-textDim">{t.name}</div>
+              {tokens.map((t) => {
+                const symbol = t.symbol || t.tokenSymbol || (t.name ? String(t.name).split(' ')[0].toUpperCase() : '') || (t.mint ? `${String(t.mint).slice(0,4)}...` : '');
+                const name = t.name || t.tokenName || t.fullName || '';
+                const amountDisplay = t.uiAmountString || (typeof t.amount === 'number' ? t.amount.toString() : t.amount) || '0';
+                const usdVal = typeof t.usdValue === 'number' ? t.usdValue.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : (t.usdValue || '0.00');
+
+                // Build a safe image src. If token has logoURI use it; otherwise attempt common CDN fallback using selected chain.
+                let imgSrc = t.logoURI || t.logo || t.icon || '';
+                if (imgSrc && !String(imgSrc).startsWith('http') && !String(imgSrc).startsWith('/')) {
+                  imgSrc = `https://cdn.dexscreener.com/token-images/${chain}/${t.address || t.mint || ''}`;
+                }
+                if (!imgSrc) {
+                  // prefer chain-aware placeholder
+                  imgSrc = chain === 'bsc' ? '/bnb.png' : '/sol.png';
+                }
+
+                // token-specific chain label (fallback to page chain)
+                const tokenChain = (t.chain || chain || 'solana').toString().toLowerCase();
+                const chainLabel = tokenChain.startsWith('sol') ? 'SOL' : tokenChain.startsWith('bsc') || tokenChain.startsWith('bnb') ? 'BSC' : tokenChain.toUpperCase().slice(0,3);
+
+                return (
+                  <div key={t.mint || t.address} className="flex items-center justify-between bg-[#0b0b0d] rounded-lg p-2 hover:bg-[#0f0f11] transition">
+                    <div className="flex items-center space-x-3">
+                      <div className="relative w-8 h-8">
+                        <img src={imgSrc} alt={symbol} className="w-8 h-8 rounded-full object-cover" />
+                        <span className="absolute -bottom-1 -right-1 text-[10px] px-1 rounded-full bg-[#0b0b0b] border border-line text-textDim">{chainLabel}</span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium flex items-center gap-2">
+                          <span>{name || symbol}</span>
+                          <span className="text-xs text-textDim bg-[#0d0d0f] px-2 py-0.5 rounded-full">{symbol}</span>
+                        </div>
+                        {name && <div className="text-xs text-textDim">{name}</div>}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium">{amountDisplay}</div>
+                      <div className="text-xs text-textDim">${usdVal}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium">{t.uiAmountString || t.amount || '0'}</div>
-                    <div className="text-xs text-textDim">${t.usdValue || '0.00'}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
