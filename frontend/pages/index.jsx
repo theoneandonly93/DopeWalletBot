@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
@@ -18,6 +18,8 @@ export default function Home() {
   const [showTransfer, setShowTransfer] = useState(false);
   const [toast, setToast] = useState(null);
   const [chain, setChain] = useState('solana');
+  const [hasSavedVault, setHasSavedVault] = useState(false);
+  const addressBtnRef = useRef(null);
 
   useEffect(() => {
     try { readyTelegram(); } catch (e) { /* ignore */ }
@@ -31,7 +33,12 @@ export default function Home() {
   const lastPw = localStorage.getItem('DW_LAST_PW');
         const signed = localStorage.getItem('dopewallet_signedin');
   const blob = localStorage.getItem('DW_VAULT_V1');
-        if (!blob) return;
+        // mark whether a saved (encrypted) vault exists so the UI can show a locked entry
+        if (blob && mounted) setHasSavedVault(true);
+        if (!blob) {
+          if (mounted) setHasSavedVault(false);
+          return;
+        }
         // If we have a cached password, attempt to decrypt and set the vault so the wallet view shows.
         if (lastPw) {
           const v = await loadVault(lastPw);
@@ -57,6 +64,16 @@ export default function Home() {
     window.addEventListener('storage', onStorage);
     return () => { mounted = false; window.removeEventListener('dopewallet:signin', onSignin); window.removeEventListener('storage', onStorage); };
   }, []);
+
+  // When a vault becomes available, move keyboard focus to the address button for accessibility
+  useEffect(() => {
+    if (vault && addressBtnRef.current) {
+      // small timeout to ensure element is present
+      setTimeout(() => {
+        try { addressBtnRef.current.focus(); } catch (e) {}
+      }, 80);
+    }
+  }, [vault]);
 
   // Fetch balances and tokens when vault is available
   useEffect(() => {
@@ -125,56 +142,35 @@ export default function Home() {
 
       {/* --- choose screen --- */}
       {stage === 'choose' && !vault && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 space-y-6">
-          <div className="relative">
-            <motion.img
-              src="/logo-512.png"
-              alt="DopeWallet"
-              className="w-28 h-28 mx-auto mb-3 relative z-10"
-              animate={{ y: [0, -6, 0], scale: [0.995, 1, 0.995], rotate: [0, 4, 0] }}
-              transition={{ y: { repeat: Infinity, duration: 2.6, ease: 'easeInOut' }, scale: { repeat: Infinity, duration: 3.6 }, rotate: { repeat: Infinity, duration: 6 } }}
-            />
-            <motion.div aria-hidden className="absolute inset-0 flex items-center justify-center z-0">
-              <motion.span
-                aria-hidden
-                className="rounded-full"
-                style={{
-                  width: 96,
-                  height: 96,
-                  pointerEvents: 'none',
-                  filter: 'blur(18px)',
-                  background: 'radial-gradient(circle at 50% 40%, rgba(140,104,255,0.9), rgba(140,104,255,0.4) 40%, rgba(140,104,255,0) 70%)'
-                }}
-                animate={{ opacity: [0, 0.85, 0] }}
-                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-              />
-            </motion.div>
-          </div>
-          <h1 className="text-2xl font-bold">Choose DopeWallet</h1>
-          <p className="text-textDim text-sm leading-relaxed">
-            You have one DopeWallet available for recovery.
-            <br />
-            Restore it or add a new one.
-          </p>
-
-          <div className="w-full bg-card rounded-xl border border-line py-3 px-4 text-left space-y-1">
-            <div className="text-sm">
-              <span className="text-textDim">
-                {vault?.pubkey
-                  ? `${vault.pubkey.slice(0, 4)}...${vault.pubkey.slice(-4)}`
-                  : 'No saved wallet yet'}
-              </span>
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="w-full max-w-md bg-black/95 border border-[#222] rounded-2xl p-6 text-center space-y-6">
+            <div className="mx-auto">
+              <img src="/logo-512.png" alt="DopeWallet" className="w-24 h-24 mx-auto mb-2" />
             </div>
-            <div className="text-xs text-textDim">$0.00 · 0 tokens · 0 collectibles</div>
+            <h1 className="text-2xl font-bold">Welcome to DopeWallet</h1>
+            <p className="text-textDim text-sm leading-relaxed">
+              Restore your saved wallet or create a new one.
+            </p>
+
+            <div className="w-full bg-[#0b0b0d] rounded-xl border border-line py-3 px-4 text-left space-y-1" role="status" aria-live="polite">
+              <div className="text-sm">
+                <span className="text-textDim">
+                  {vault?.pubkey
+                    ? `${vault.pubkey.slice(0, 4)}...${vault.pubkey.slice(-4)}`
+                    : hasSavedVault ? 'Saved wallet available (locked)' : 'No saved wallet yet'}
+                </span>
+              </div>
+              <div className="text-xs text-textDim">$0.00 · 0 tokens · 0 collectibles</div>
+            </div>
+
+            <button onClick={handleRestore} className="w-full bg-accent rounded-xl py-2 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6]" aria-label="Restore saved wallet">
+              Restore Wallet
+            </button>
+
+            <button onClick={handleNewWallet} className="w-full border border-[#2a2a2a] rounded-xl py-2 text-[#3B82F6] font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6]" aria-label="Create or import wallet">
+              Create or import another wallet
+            </button>
           </div>
-
-          <button onClick={handleRestore} className="w-full bg-accent rounded-xl py-2 text-white font-semibold">
-            Restore Wallet
-          </button>
-
-          <button onClick={handleNewWallet} className="text-[#3B82F6] font-medium">
-            Create or import another wallet
-          </button>
         </div>
       )}
 
@@ -216,7 +212,9 @@ export default function Home() {
                     setTimeout(() => setToast(null), 1600);
                   }
                 }}
-                className="font-mono text-sm sm:text-base text-gray-300 font-semibold truncate max-w-xs sm:max-w-md mx-auto hover:underline cursor-pointer"
+                ref={addressBtnRef}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { navigator.clipboard.writeText(vault.pubkey); setToast('Address copied'); setTimeout(()=>setToast(null),1600);} catch(e){} } }}
+                className="font-mono text-sm sm:text-base text-gray-300 font-semibold truncate max-w-xs sm:max-w-md mx-auto hover:underline cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#3B82F6]"
                 aria-label="Copy address"
                 title={vault.pubkey}
                 style={{ letterSpacing: '0.2px' }}

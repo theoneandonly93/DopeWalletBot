@@ -3,5 +3,5 @@
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
   "/swap": "pages/swap.js",
-  "/token/[mint]": "pages/token/[mint].js"
+  "/browser": "pages/browser.js"
 }

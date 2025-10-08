@@ -22,15 +22,15 @@
       "static/chunks/main.js",
       "static/chunks/pages/_error.js"
     ],
+    "/browser": [
+      "static/chunks/webpack.js",
+      "static/chunks/main.js",
+      "static/chunks/pages/browser.js"
+    ],
     "/swap": [
       "static/chunks/webpack.js",
       "static/chunks/main.js",
       "static/chunks/pages/swap.js"
-    ],
-    "/token/[mint]": [
-      "static/chunks/webpack.js",
-      "static/chunks/main.js",
-      "static/chunks/pages/token/[mint].js"
     ]
   },
   "ampFirstPages": []

@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"pages/token/[mint].jsx -> react-chartjs-2\":{\"id\":\"pages/token/[mint].jsx -> react-chartjs-2\",\"files\":[\"static/chunks/node_modules_react-chartjs-2_dist_index_js.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
