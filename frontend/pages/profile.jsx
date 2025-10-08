@@ -1,115 +1,252 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
 import axios from "axios";
-import Navigation from "../components/navigation";
+import Header from "../components/Header";
+import BottomNav from "../components/BottomNav";
+import { loadVault } from "../lib/wallet";
+import { getPortfolio } from "../lib/api";
 
 export default function Profile() {
+  const [vault, setVault] = useState(null);
+  const [portfolio, setPortfolio] = useState(null);
+  const [followers, setFollowers] = useState(null);
+  const [following, setFollowing] = useState(null);
+  const router = useRouter();
+  const usernameFromPath = router.query.username || null;
+
   const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [network, setNetwork] = useState("mainnet");
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState({ display_name: "", username: "", avatar_url: "", bio: "" });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [processingFollow, setProcessingFollow] = useState(false);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
 
-  useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    const telegramId = tg?.initDataUnsafe?.user?.id;
-    if (!telegramId) return;
-
-    const fetchProfile = async () => {
-      try {
-        const res = await axios.get(`${BACKEND_URL}/profile/${telegramId}`);
-        setProfile(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.reload();
+  // Determine current logged-in Telegram ID (if available)
+  const getTelegramId = () => {
+    const tg = typeof window !== 'undefined' && window.Telegram?.WebApp;
+    if (!tg) return null;
+    return tg?.initDataUnsafe?.user?.id || (tg?.initData && (() => { try { return JSON.parse(tg.initData).user?.id } catch { return null } })());
   };
 
-  const handleRevealKeys = () => {
-    const priv = localStorage.getItem("privateKey");
-    const mnemonic = localStorage.getItem("mnemonic");
-    if (!mnemonic) {
-      alert(`⚠️ WARNING: No seed phrase available for this wallet. Save your private key now.\n\n🔑 Private Key:\n${priv}`);
-    } else {
-      alert(`🔑 Private Key:\n${priv}\n\n🪶 Seed Phrase:\n${mnemonic}`);
+  useEffect(() => {
+    (async () => {
+      const pw = sessionStorage.getItem("DW_LAST_PW");
+      if (pw) {
+        const v = await loadVault(pw);
+        setVault(v);
+        if (v?.pubkey) setPortfolio(await getPortfolio(v.pubkey));
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      setLoadingProfile(true);
+      try {
+        const tgId = getTelegramId();
+        let res;
+        if (usernameFromPath) {
+          res = await axios.get(`${BACKEND_URL}/profile/${usernameFromPath}`);
+        } else if (tgId) {
+          res = await axios.get(`${BACKEND_URL}/profile/by_telegram/${tgId}`);
+        } else {
+          setProfile(null);
+          setLoadingProfile(false);
+          return;
+        }
+        setProfile(res.data);
+      } catch (err) {
+        console.error('Failed to load profile', err?.response?.data || err.message || err);
+        setProfile(null);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    loadProfile();
+  }, [usernameFromPath]);
+
+  // Auto-open edit modal if routed with ?edit=true
+  useEffect(() => {
+    if (router.query?.edit === 'true') {
+      openEdit();
+    }
+  }, [router.query]);
+
+  const openEdit = () => {
+    setEditData({
+      display_name: profile?.display_name || profile?.username || "",
+      username: profile?.username || "",
+      avatar_url: profile?.avatar_url || "",
+      bio: profile?.bio || "",
+    });
+    setEditing(true);
+  };
+
+  const saveProfile = async () => {
+    try {
+      const tgId = getTelegramId();
+      if (!tgId) {
+        // Allow saving in dev if Telegram not present, but warn the user
+        if (!confirm('Telegram not detected. Save profile locally?')) return;
+      }
+      const payload = {
+        telegramId: tgId || null,
+        username: editData.username,
+        displayName: editData.display_name,
+        avatarUrl: editData.avatar_url,
+        bio: editData.bio,
+      };
+      const res = await axios.post(`${BACKEND_URL}/profile/create`, payload);
+      if (res.data?.success) {
+        setProfile(res.data.profile);
+        setEditing(false);
+      } else {
+        alert("Error saving profile");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving profile");
     }
   };
 
-  const toggleNetwork = () => {
-    const next = network === "mainnet" ? "testnet" : "mainnet";
-    setNetwork(next);
-    alert(`Switched to ${next}`);
+  const toggleFollow = async () => {
+    try {
+      setProcessingFollow(true);
+      const me = getTelegramId();
+      if (!me) return alert("Open inside Telegram to follow users.");
+      const res = await axios.post(`${BACKEND_URL}/profile/follow`, { follower: me, following: profile.username });
+      if (res.data?.action === "followed") setIsFollowing(true);
+      if (res.data?.action === "unfollowed") setIsFollowing(false);
+    } catch (err) {
+      console.error(err);
+      alert("Unable to follow/unfollow");
+    } finally {
+      setProcessingFollow(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
-      <div className="p-4 relative">
-        <h1 className="text-xl font-bold mb-2">👤 Profile</h1>
-        <button
-          onClick={() => setShowSettings(!showSettings)}
-          className="absolute top-4 right-4 btn btn-square btn-ghost text-white"
-        >
-          ⚙️
-        </button>
+  useEffect(() => {
+    (async () => {
+      const pw = sessionStorage.getItem("DW_LAST_PW");
+      if (pw) {
+        const v = await loadVault(pw);
+        setVault(v);
+        if (v?.pubkey) setPortfolio(await getPortfolio(v.pubkey));
+      }
+    })();
+  }, []);
 
-        {showSettings && (
-          <div className="absolute right-4 top-14 z-50 card bg-neutral shadow-lg w-64">
-            <div className="card-body p-3">
-              <button
-                className="btn btn-sm bg-secondary text-white w-full mb-2"
-                onClick={handleRevealKeys}
-              >
-                Reveal Secret Key
-              </button>
-              <button
-                className="btn btn-sm bg-secondary text-white w-full mb-2"
-                onClick={toggleNetwork}
-              >
-                Switch to {network === "mainnet" ? "Testnet" : "Mainnet"}
-              </button>
-              <button
-                className="btn btn-sm btn-error text-white w-full"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
+  return (
+    <div className="min-h-screen bg-bg text-white pb-24">
+      <Header />
+
+      <div className="p-4 space-y-4">
+        {/* profile card */}
+        <div className="card bg-card rounded-xl p-4 text-center space-y-3">
+          <div className="flex justify-center">
+            <div className="avatar">
+              <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center text-2xl">👻</div>
             </div>
           </div>
-        )}
-
-        {loading && <p className="text-gray-400">Loading profile...</p>}
-
-        {profile && (
-          <div className="card bg-neutral shadow-xl p-4 mt-4">
-            <div className="flex items-center gap-3 mb-2">
-              <img
-                src={profile.avatar_url || "https://api.dicebear.com/7.x/identicon/svg"}
-                alt="avatar"
-                className="w-12 h-12 rounded-full"
-              />
-              <div>
-                <p className="font-semibold">{profile.display_name || profile.username}</p>
-                <p className="text-xs text-gray-400 truncate">{profile.wallet_pubkey}</p>
-              </div>
+          <div className="text-lg font-semibold">{profile?.display_name || (vault ? "@" + vault.pubkey.slice(0, 6) + "..." : "Anonymous")}</div>
+          <div className="text-sm text-textDim">{profile?.bio || "The dopest wallet on Solana 🔥"}</div>
+          <div className="stats stats-vertical sm:stats-horizontal shadow-none bg-transparent p-0">
+            <div className="stat">
+              <div className="stat-value">{profile?.followers ?? '-'}</div>
+              <div className="stat-desc text-textDim">Followers</div>
             </div>
-            <p className="text-sm mt-2">{profile.bio || "No bio yet."}</p>
-            <div className="flex justify-between text-sm mt-3 text-gray-400">
-              <p>{profile.followers || 0} Followers</p>
-              <p>{profile.following || 0} Following</p>
+            <div className="stat">
+              <div className="stat-value">{profile?.following ?? '-'}</div>
+              <div className="stat-desc text-textDim">Following</div>
+            </div>
+          </div>
+          <div className="flex justify-center gap-3">
+            <button onClick={openEdit} className="btn btn-primary rounded-xl py-2 px-6 font-semibold text-sm">Edit Profile</button>
+            <button disabled={processingFollow} onClick={toggleFollow} className="btn btn-ghost rounded-xl py-2 px-6">{isFollowing ? 'Following' : 'Follow'}</button>
+          </div>
+        </div>
+
+        {/* token follows */}
+        <div className="bg-card rounded-xl p-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="text-sm font-semibold">Followed Tokens</div>
+            <button className="text-[#3B82F6] text-xs">See All ›</button>
+          </div>
+          <div className="space-y-2">
+            {portfolio?.tokens?.slice(0, 3).map((t) => (
+              <div key={t.mint} className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <img src={t.logo} className="w-6 h-6 rounded-full" alt={t.symbol} />
+                  <div className="text-sm">{t.symbol}</div>
+                </div>
+                <div className="text-sm text-textDim">${(t.price ?? 0).toFixed(2)}</div>
+              </div>
+            ))}
+            {!portfolio?.tokens?.length && (
+              <div className="text-xs text-textDim text-center py-2">You haven’t followed any tokens yet.</div>
+            )}
+          </div>
+        </div>
+
+        {/* recent activity: replaced with dynamic/empty state until backend provides activity feed */}
+        <div className="bg-card rounded-xl p-4 space-y-2">
+          <div className="flex justify-between items-center">
+            <div className="text-sm font-semibold">Recent Activity</div>
+            <button className="text-[#3B82F6] text-xs">View More ›</button>
+          </div>
+          <div className="text-xs text-textDim">No recent activity available.</div>
+        </div>
+        {/* Edit modal */}
+        {editing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="bg-neutral card p-4 w-96">
+              <h3 className="font-bold mb-2">Edit Profile</h3>
+              <label className="label">
+                <span className="label-text">Display name</span>
+              </label>
+              <input className="input w-full mb-2" value={editData.display_name} onChange={(e) => setEditData({...editData, display_name: e.target.value})} />
+              <label className="label">
+                <span className="label-text">Username</span>
+              </label>
+              <input className="input w-full mb-2" value={editData.username} onChange={(e) => setEditData({...editData, username: e.target.value})} />
+              <label className="label">
+                <span className="label-text">Avatar (upload)</span>
+              </label>
+              <div className="flex items-center gap-3 mb-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      setEditData(prev => ({ ...prev, avatar_url: String(reader.result) }));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                {editData.avatar_url && (
+                  <img src={editData.avatar_url} alt="preview" className="w-12 h-12 rounded-full object-cover" />
+                )}
+              </div>
+              <label className="label">
+                <span className="label-text">Bio</span>
+              </label>
+              <textarea className="textarea w-full mb-2" value={editData.bio} onChange={(e) => setEditData({...editData, bio: e.target.value})} />
+
+              <div className="flex justify-end gap-2">
+                <button className="btn" onClick={() => setEditing(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={saveProfile}>Save</button>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      <Navigation active="profile" />
+      <BottomNav />
     </div>
   );
 }

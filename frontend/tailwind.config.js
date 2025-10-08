@@ -1,5 +1,26 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  content: ["./pages/**/*.{js,jsx}", "./components/**/*.{js,jsx}", "./lib/**/*.{js,jsx}"],
+  theme: {
+    extend: {
+      colors: {
+        bg: "#0C0C0C",
+        card: "#1A1A1A",
+        line: "#222222",
+        textDim: "#9CA3AF",
+        accent: "#8C68FF",
+        success: "#16a34a",
+        danger: "#ef4444",
+      },
+      borderRadius: {
+        xl2: "1rem",
+      }
+    },
+  },
+  plugins: [],
+}
+/** @type {import('tailwindcss').Config} */
+module.exports = {
   content: [
     "./pages/**/*.{js,jsx}",
     "./components/**/*.{js,jsx}"

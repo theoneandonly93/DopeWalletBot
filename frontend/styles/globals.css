@@ -1,23 +1,32 @@
+/* stylelint-disable */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #0A0A0B;
+  --card: #1A1A1A;
+  --accent: #8C68FF;
+  --text-dim: #9CA3AF;
+}
+
+html, body, #__next { height: 100%; }
+
 html, body {
-  background-color: #0A0A0B;
+  background-color: var(--bg);
   color: white;
   font-family: 'Inter', sans-serif;
   height: 100%;
   overflow-x: hidden;
 }
 
-::-webkit-scrollbar {
-  display: none;
-}
+.bg-phantom-bg { background: var(--bg); }
+.btn-primary { background: var(--accent); }
+.bg-card { background: var(--card); }
+.rounded-xl2 { border-radius: 1rem; }
 
-button {
-  transition: all 0.2s ease-in-out;
-}
+::-webkit-scrollbar { display: none; }
 
-.phantom-gradient {
-  background: radial-gradient(circle at 50% 30%, #1b133d, #0A0A0B 80%);
-}
+button { transition: all 0.2s ease-in-out; }
+
+.phantom-gradient { background: radial-gradient(circle at 50% 30%, #1b133d, var(--bg) 80%); }

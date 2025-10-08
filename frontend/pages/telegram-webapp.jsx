@@ -10,7 +10,9 @@ export default function TelegramWebApp() {
     // Telegram injects window.Telegram.WebApp when opened in the Telegram client
     const tg = typeof window !== 'undefined' && window.Telegram?.WebApp;
     if (tg) {
-      setInitData(tg.initData);
+      // initData is a URL-encoded string; initDataUnsafe is the parsed object
+      // provided by Telegram's WebApp JS. Prefer initDataUnsafe when available.
+      setInitData(tg.initDataUnsafe || tg.initData);
       // Optionally expand the webapp for better UX
       try { tg.expand(); } catch (e) {}
     } else {

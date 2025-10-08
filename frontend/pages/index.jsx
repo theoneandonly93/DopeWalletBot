@@ -1,160 +1,146 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { motion } from "framer-motion";
-import Navigation from "../components/navigation";
-import TokenChartModal from "../components/TokenChartModal";
-import ActionModal from "../components/ActionModal";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import Header from '../components/Header';
+import BottomNav from '../components/BottomNav';
+import { createWallet, saveVault, loadVault } from '../lib/wallet';
+import { readyTelegram } from '../lib/telegram';
+import { motion } from 'framer-motion';
 
 export default function Home() {
-  const [wallet, setWallet] = useState(null);
-  const [balance, setBalance] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [tokens, setTokens] = useState([]);
-  const [selectedToken, setSelectedToken] = useState(null);
-  const [tokenPrices, setTokenPrices] = useState({});
-  const [actionModal, setActionModal] = useState({ open: false, type: null });
-
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
+  const [vault, setVault] = useState(null);
+  const [stage, setStage] = useState('choose');
+  const [tempVault, setTempVault] = useState(null);
 
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
-    tg?.expand();
-
-    const telegramId = tg?.initDataUnsafe?.user?.id;
-
-    if (!telegramId) {
-      setError("No Telegram user detected. Open inside the Telegram Web App or sign in.");
-      setLoading(false);
-      return;
-    }
-
-    // fetch wallet, balance, and tokens
-    const fetchWalletData = async () => {
-      try {
-        const res = await axios.get(`${BACKEND_URL}/wallet/balance/${telegramId}`);
-        setWallet(res.data.publicKey);
-        setBalance(res.data.balance);
-        // Fetch tokens (replace with actual API if available)
-        const tokensRes = await axios.get(`${BACKEND_URL}/wallet/tokens/${telegramId}`);
-        setTokens(tokensRes.data.tokens || []);
-        // Fetch prices for tokens
-        const priceObj = {};
-        for (const token of tokensRes.data.tokens || []) {
-          try {
-            const priceRes = await axios.get(`https://api.dexscreener.com/latest/dex/tokens/${token.mint}`);
-            const pair = priceRes.data.pairs?.[0];
-            priceObj[token.symbol] = pair?.priceUsd ? parseFloat(pair.priceUsd) : null;
-          } catch {
-            priceObj[token.symbol] = null;
-          }
-        }
-        setTokenPrices(priceObj);
-      } catch (err) {
-        setError(err.response?.data?.error || err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchWalletData();
+    try { readyTelegram(); } catch (e) { /* ignore */ }
   }, []);
 
+  async function handleNewWallet() {
+    const v = await createWallet();
+    setTempVault(v);
+    setStage('create');
+  }
+
+  async function handleSavePassword() {
+    const pass1 = document.getElementById('p1')?.value;
+    const pass2 = document.getElementById('p2')?.value;
+    if (!pass1 || pass1 !== pass2) return alert('Passwords must match');
+    if (!tempVault) return;
+    await saveVault(pass1, tempVault);
+    sessionStorage.setItem('DW_LAST_PW', pass1);
+    setVault(tempVault);
+    setStage('choose');
+    // Mark user as signed in and notify app to hide onboarding
+    localStorage.setItem('dopewallet_signedin', 'true');
+    try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) { /* ignore */ }
+    try { router.push('/profile'); } catch (e) { /* ignore */ }
+  }
+
+  async function handleRestore() {
+    const pw = prompt('Enter your wallet password:');
+    if (!pw) return;
+    const v = await loadVault(pw);
+    if (!v) return alert('Invalid password or no wallet found.');
+    setVault(v);
+    // consider the user signed in after successful restore
+    localStorage.setItem('dopewallet_signedin', 'true');
+    try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) { /* ignore */ }
+  }
+
+  const router = useRouter();
+
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
-      <div className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <img src="/logo-512.png" alt="DopeWallet Logo" className="w-8 h-8 rounded-full" />
-          <h1 className="text-xl font-bold">DopeWallet</h1>
+    <div className="min-h-screen bg-bg text-white flex flex-col pb-24">
+      <Header />
+
+      {/* --- choose screen --- */}
+      {stage === 'choose' && !vault && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 space-y-6">
+          <div className="relative">
+            <motion.img
+              src="/logo-512.png"
+              alt="DopeWallet"
+              className="w-28 h-28 mx-auto mb-3 relative z-10"
+              animate={{ y: [0, -6, 0], scale: [0.995, 1, 0.995], rotate: [0, 4, 0] }}
+              transition={{ y: { repeat: Infinity, duration: 2.6, ease: 'easeInOut' }, scale: { repeat: Infinity, duration: 3.6 }, rotate: { repeat: Infinity, duration: 6 } }}
+            />
+            <motion.div aria-hidden className="absolute inset-0 flex items-center justify-center z-0">
+              <motion.span
+                aria-hidden
+                className="rounded-full"
+                style={{
+                  width: 96,
+                  height: 96,
+                  pointerEvents: 'none',
+                  filter: 'blur(18px)',
+                  background: 'radial-gradient(circle at 50% 40%, rgba(140,104,255,0.9), rgba(140,104,255,0.4) 40%, rgba(140,104,255,0) 70%)'
+                }}
+                animate={{ opacity: [0, 0.85, 0] }}
+                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              />
+            </motion.div>
+          </div>
+          <h1 className="text-2xl font-bold">Choose DopeWallet</h1>
+          <p className="text-textDim text-sm leading-relaxed">
+            You have one DopeWallet available for recovery.
+            <br />
+            Restore it or add a new one.
+          </p>
+
+          <div className="w-full bg-card rounded-xl border border-line py-3 px-4 text-left space-y-1">
+            <div className="text-sm">
+              <span className="text-textDim">
+                {vault?.pubkey
+                  ? `${vault.pubkey.slice(0, 4)}...${vault.pubkey.slice(-4)}`
+                  : 'No saved wallet yet'}
+              </span>
+            </div>
+            <div className="text-xs text-textDim">$0.00 · 0 tokens · 0 collectibles</div>
+          </div>
+
+          <button onClick={handleRestore} className="w-full bg-accent rounded-xl py-2 text-white font-semibold">
+            Restore Wallet
+          </button>
+
+          <button onClick={handleNewWallet} className="text-[#3B82F6] font-medium">
+            Create or import another wallet
+          </button>
         </div>
+      )}
 
-        {loading && <p className="text-gray-400">Loading wallet...</p>}
-        {error && <p className="text-red-500">{error}</p>}
+      {/* --- create password screen --- */}
+      {stage === 'create' && tempVault && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 space-y-4">
+          <img src="/logo-512.png" alt="DopeWallet" className="w-28 h-28 mx-auto mb-3" />
+          <h1 className="text-2xl font-bold">Secure Your Wallet</h1>
+          <p className="text-textDim text-sm">
+            Your new address:
+            <br />
+            <span className="text-white text-xs break-all">{tempVault.pubkey}</span>
+          </p>
+          <div className="w-full bg-card rounded-xl p-4 space-y-3">
+            <input id="p1" type="password" placeholder="Password" className="w-full bg-[#111] border border-line rounded-xl2 p-2" />
+            <input id="p2" type="password" placeholder="Confirm Password" className="w-full bg-[#111] border border-line rounded-xl2 p-2" />
+            <button onClick={handleSavePassword} className="w-full bg-accent text-white rounded-xl2 py-2 font-semibold">
+              Continue
+            </button>
+          </div>
+          <div className="text-xs text-textDim max-w-sm">Be sure to save your recovery phrase and private key safely.</div>
+        </div>
+      )}
 
-        {/* Balance Card */}
-        {!loading && !error && (
-          <motion.div
-            className="card bg-gradient-to-br from-[#1b133d] to-[#0A0A0B] shadow-xl mb-6 border border-gray-800"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="card-body flex flex-col items-center">
-              <h2 className="card-title text-sm text-gray-400">Wallet Balance</h2>
-              <p className="truncate text-xs text-gray-500 mb-2">{wallet}</p>
-              <h3 className="text-4xl font-bold mt-2 mb-2">{balance?.toFixed(3)} SOL</h3>
-              <div className="flex gap-3 mb-2">
-                <button
-                  className="btn btn-sm bg-green-600 text-white font-semibold shadow-md"
-                  onClick={() => setActionModal({ open: true, type: 'buy' })}
-                >
-                  Buy
-                </button>
-                <button
-                  className="btn btn-sm bg-blue-600 text-white font-semibold shadow-md"
-                  onClick={() => setActionModal({ open: true, type: 'send' })}
-                >
-                  Send
-                </button>
-                <button
-                  className="btn btn-sm bg-purple-600 text-white font-semibold shadow-md"
-                  onClick={() => setActionModal({ open: true, type: 'receive' })}
-                >
-                  Receive
-                </button>
-              </div>
-              <button
-                className="btn btn-xs bg-phantom-accent text-white mt-2"
-                onClick={() => window.location.reload()}
-              >
-                Refresh
-              </button>
-            </div>
-          </motion.div>
-        )}
+      {vault && (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center space-y-3">
+          <div className="text-lg font-semibold">Welcome back</div>
+          <div className="text-xs text-textDim">{vault.pubkey.slice(0, 4)}...{vault.pubkey.slice(-4)}</div>
+          <button onClick={() => { localStorage.setItem('dopewallet_signedin','true'); try { window.dispatchEvent(new Event('dopewallet:signin')); } catch(e){}; router.push('/profile'); }} className="bg-accent rounded-xl py-2 px-6">
+            Enter Wallet
+          </button>
+        </div>
+      )}
 
-        {/* Token Holdings Card */}
-        {!loading && !error && (
-          <motion.div
-            className="card bg-neutral shadow-xl mb-6 border border-gray-800"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="card-body">
-              <h2 className="font-semibold mb-2">Token Holdings</h2>
-              <div className="grid grid-cols-2 gap-3">
-                {tokens.length === 0 && <p className="text-gray-400 col-span-2">No tokens found.</p>}
-                {tokens.map((token) => (
-                  <div
-                    key={token.symbol}
-                    className="card bg-secondary text-center py-3 cursor-pointer hover:shadow-lg transition"
-                    onClick={() => setSelectedToken(token)}
-                  >
-                    <p className="font-bold text-lg mb-1">{token.symbol}</p>
-                    <p className="text-xs text-gray-400 mb-1">{token.mint}</p>
-                    <p className="text-sm">Amount: {token.amount}</p>
-                    <p className="text-xs text-gray-300">Price: {tokenPrices[token.symbol] ? `$${tokenPrices[token.symbol].toFixed(4)}` : "N/A"}</p>
-                    <p className="text-xs text-gray-300 font-semibold">Value: {tokenPrices[token.symbol] ? `$${(token.amount * tokenPrices[token.symbol]).toFixed(2)}` : "N/A"}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Token Modal */}
-        {selectedToken && (
-          <TokenChartModal token={selectedToken} onClose={() => setSelectedToken(null)} />
-        )}
-      </div>
-
-      <Navigation active="home" />
-      <ActionModal
-        open={actionModal.open}
-        type={actionModal.type}
-        onClose={() => setActionModal({ open: false, type: null })}
-        onSubmit={({ type, form }) => console.log('Action submit', type, form)}
-      />
+      <BottomNav />
     </div>
   );
 }
+

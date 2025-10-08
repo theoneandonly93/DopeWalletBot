@@ -22,13 +22,13 @@ export default function SplashScreen({ onFinish }) {
       transition={{ duration: 0.3 }}
     >
       <motion.div
-        initial={{ scale: 0.7, opacity: 0 }}
+        initial={{ scale: 0.85, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 10 }}
         className="flex flex-col items-center"
       >
-  <img src="/logo-512.png" alt="DopeWallet Logo" className="w-24 h-24 mb-2 rounded-full shadow-lg" />
-        <h1 className="text-3xl font-bold text-white tracking-wide">DopeWallet</h1>
+        <img src="/logo-512.png" alt="DopeWallet Logo" className="w-24 h-24 mb-2 rounded-full shadow-lg" />
+        <p className="text-sm text-textDim mt-2">loading…</p>
       </motion.div>
     </motion.div>
   );

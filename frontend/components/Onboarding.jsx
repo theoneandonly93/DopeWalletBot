@@ -25,13 +25,15 @@ export default function Onboarding({ onComplete }) {
     setLoading(true);
     setError("");
     try {
-      // Call backend to create wallet and store password
-      // Replace with your actual API endpoint
-      await axios.post("/api/onboarding", { password });
-      onComplete();
+      // Call backend to create wallet and store password (best-effort).
+      // If the backend is unavailable, still allow local onboarding.
+      await axios.post("/api/onboarding", { password }).catch(() => null);
     } catch (e) {
-      setError(e.response?.data?.error || "Failed to create account.");
+      // ignore server errors
     } finally {
+      try { localStorage.setItem('dopewallet_signedin', 'true'); } catch (e) {}
+      try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) {}
+      onComplete();
       setLoading(false);
     }
   };

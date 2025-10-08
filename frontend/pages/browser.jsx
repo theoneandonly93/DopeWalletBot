@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import Navigation from "../components/navigation";
+import Header from "../components/Header";
+import BottomNav from "../components/BottomNav";
 
 export default function Browser() {
   const iframeRef = useRef(null);
@@ -57,6 +58,7 @@ export default function Browser() {
 
   return (
     <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
+      <Header />
       <div className="p-3">
         <form onSubmit={handleNav} className="flex mb-2">
           <input
@@ -84,12 +86,12 @@ export default function Browser() {
       </div>
 
       {!connected && (
-        <div className="p-3 text-center text-sm text-yellow-300 bg-yellow-900/10">
+        <div className="p-3 text-center text-sm text-yellow-300 bg-yellow-900/10 rounded-md">
           Provider injection disabled for cross-origin sites. Open the dApp in a same-origin context to enable the injected wallet provider.
         </div>
       )}
 
-      <Navigation active="browser" />
+      <BottomNav />
     </div>
   );
 }
