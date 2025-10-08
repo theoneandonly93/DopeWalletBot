@@ -42,26 +42,14 @@ if (!TELEGRAM_TOKEN) {
   console.error('Missing TELEGRAM_BOT_TOKEN in environment. Bot will not start.');
 } else {
   try {
-    // quick validation call to Telegram API
-    const validate = async () => {
-      try {
-        const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe`);
-        const data = await res.json();
-        if (!data.ok) {
-          console.error('Telegram token invalid:', data.description);
-          return false;
-        }
-        return true;
-      } catch (e) {
-        console.error('Failed to validate Telegram token:', e.message || e);
-        return false;
-      }
-    };
-
-    validate().then((ok) => {
-      if (!ok) return;
+    // Instantiate the bot directly. Skip the network validation step so the
+    // server won't hang or produce confusing errors during startup when
+    // running locally. If the token is invalid Telegram will reject requests
+    // and the bot will log errors, but the server keeps running.
+    try {
       bot = new TelegramBot(TELEGRAM_TOKEN, { polling: true });
-      console.log('Telegram bot started.');
+      console.log('Telegram bot started (polling).');
+
       // register handlers after bot is created
       bot.onText(/\/start/, async (msg) => {
         const chatId = msg.chat.id;
@@ -95,7 +83,27 @@ if (!TELEGRAM_TOKEN) {
         const balance = await connection.getBalance(data.wallet_pubkey);
         bot.sendMessage(chatId, `💰 Balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
       });
-    });
+
+      // Handle polling errors from the Telegram library. If we receive an
+      // Unauthorized (401) error repeatedly it usually means the token is
+      // invalid; stop polling to avoid continuous error spam.
+      bot.on('polling_error', (err) => {
+        try {
+          // The library may provide an error object or JSON string
+          const code = err?.response?.body?.error_code || err?.code || (err?.response && err.response.status);
+          console.error('Telegram polling_error', JSON.stringify(err?.response?.body || err || { message: err?.message }));
+          if (code === 401 || code === 'ETELEGRAM' || (err && /401|Unauthorized/i.test(String(err)))) {
+            console.error('Telegram polling received 401 Unauthorized — stopping polling to avoid spam.');
+            try { bot.stopPolling(); } catch (stopErr) { console.error('Failed to stop polling:', stopErr); }
+          }
+        } catch (e) {
+          console.error('Error handling polling_error:', e);
+        }
+      });
+    } catch (e) {
+      console.error('Failed to instantiate Telegram bot (silent):', e.message || e);
+      bot = undefined;
+    }
   } catch (e) {
     console.error('Failed to start Telegram bot:', e.message || e);
   }
@@ -121,39 +129,17 @@ if (process.env.AI_ENABLED === 'true') {
 }
 
 // ----- Telegram Bot Commands -----
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
-  bot.sendMessage(
-    chatId,
-    `👻 Welcome to DopeWallet!\n\nTap below to open your wallet.`,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Open Wallet",
-              web_app: { url: process.env.FRONTEND_URL || "https://dopewallet.app" },
-            },
-          ],
-        ],
-      },
-    }
-  );
-});
-
-// Example: check SOL balance command
-bot.onText(/\/balance/, async (msg) => {
-  const chatId = msg.chat.id;
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("wallet_pubkey")
-    .eq("telegram_id", chatId)
-    .single();
-
-  if (error || !data) return bot.sendMessage(chatId, "No wallet found. Open your DopeWallet first.");
-  const balance = await connection.getBalance(data.wallet_pubkey);
-  bot.sendMessage(chatId, `💰 Balance: ${(balance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
-});
+// ----- Telegram Bot Commands -----
+// Handlers are registered when the bot is created above. If the bot
+// wasn't started (missing/invalid token), avoid calling methods on
+// an undefined `bot` to prevent runtime TypeErrors.
+if (bot) {
+  // No-op here because handlers are already registered in the startup
+  // block where the bot is instantiated. This guard ensures any
+  // accidental double-registration or late requires won't crash.
+} else {
+  console.log('Telegram bot not initialized; skipping global command bindings.');
+}
 
 // Example: AI insights alert test
 app.get("/ai/signal", async (req, res) => {
