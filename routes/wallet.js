@@ -10,10 +10,11 @@ const router = express.Router();
  */
 router.post("/create", async (req, res) => {
   try {
-    const { telegramId } = req.body;
+    let { telegramId } = req.body;
+    if (!telegramId && req.user?.telegramId) telegramId = req.user.telegramId;
     if (!telegramId) return res.status(400).json({ error: "telegramId required" });
 
-    const wallet = createWallet();
+    const wallet = await createWallet();
     await upsertUserWallet(telegramId, wallet);
 
     res.json({

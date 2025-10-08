@@ -1,15 +1,16 @@
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL || '', SUPABASE_KEY || '');
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { initData } = req.body;
   if (!initData) return res.status(400).json({ error: 'initData required' });
 
-  // initData may be a string or object depending on client
-  // If object, reconstruct the check_string from fields except 'hash'
   let fields = {};
   if (typeof initData === 'string') {
-    // initData is of form "key=value&key2=value2"
     initData.split('&').forEach(pair => {
       const [k, v] = pair.split('=');
       fields[k] = decodeURIComponent(v || '');
@@ -18,10 +19,9 @@ export default function handler(req, res) {
     fields = { ...initData };
   }
 
-  const hash = fields.hash || fields['auth_date'] ? fields.hash : null;
+  const hash = fields.hash || null;
   if (!hash) return res.status(400).json({ error: 'hash missing in initData' });
 
-  // Build check string: sort by key, exclude hash
   const checkItems = Object.keys(fields).filter(k => k !== 'hash').sort().map(k => `${k}=${fields[k]}`);
   const checkString = checkItems.join('\n');
 
@@ -35,7 +35,31 @@ export default function handler(req, res) {
     return res.status(401).json({ error: 'Invalid initData signature' });
   }
 
-  // Verified. Return the user id and a simple session token (optionally create server session)
   const user = fields.user || null;
+  if (!user || !user.id) return res.status(400).json({ error: 'initData missing user info' });
+
+  // Ensure profiles row exists or upsert; do not overwrite existing fields except telegram_id
+  try {
+    const payload = { telegram_id: user.id, updated_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('profiles').upsert(payload).select();
+    if (error) {
+      console.warn('Supabase upsert error', error);
+    }
+  } catch (e) {
+    console.warn('Supabase upsert exception', e.message || e);
+  }
+
+  // Issue a signed JWT session cookie instead of raw telegramId
+  try {
+    const { sign } = await import('jsonwebtoken');
+    const secret = process.env.JWT_SECRET || 'change_this_to_a_strong_secret_replace_in_prod';
+    const token = sign({ telegramId: user.id }, secret, { expiresIn: '7d' });
+    const maxAge = 60 * 60 * 24 * 7;
+    const secureFlag = process.env.NODE_ENV === 'production' ? 'Secure; ' : '';
+    res.setHeader('Set-Cookie', `session=${token}; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${maxAge}`);
+  } catch (e) {
+    console.warn('Failed to sign session token', e.message || e);
+  }
+
   return res.json({ ok: true, user, message: 'initData verified' });
 }

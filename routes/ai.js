@@ -72,3 +72,4 @@ router.post("/alert", async (req, res) => {
 });
 
 export default router;
+

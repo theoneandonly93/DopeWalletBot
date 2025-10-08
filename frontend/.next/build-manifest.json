@@ -5,8 +5,8 @@
   "devFiles": [],
   "ampDevFiles": [],
   "lowPriorityFiles": [
-    "static/h7K6KPFsVs-Zh4UIqeiLE/_buildManifest.js",
-    "static/h7K6KPFsVs-Zh4UIqeiLE/_ssgManifest.js"
+    "static/2cZ6-NfZbk89m3IZkXWE-/_buildManifest.js",
+    "static/2cZ6-NfZbk89m3IZkXWE-/_ssgManifest.js"
   ],
   "rootMainFiles": [],
   "pages": {
@@ -20,7 +20,7 @@
       "static/chunks/webpack-ee7e63bc15b31913.js",
       "static/chunks/framework-ecc4130bc7a58a64.js",
       "static/chunks/main-cb4281779d2d79ab.js",
-      "static/css/cce16b148338cc72.css",
+      "static/css/96dbc003542440cd.css",
       "static/chunks/pages/_app-dd563767d734ca8f.js"
     ],
     "/_error": [
@@ -57,7 +57,7 @@
       "static/chunks/webpack-ee7e63bc15b31913.js",
       "static/chunks/framework-ecc4130bc7a58a64.js",
       "static/chunks/main-cb4281779d2d79ab.js",
-      "static/chunks/pages/telegram-webapp-45c8376d5ef85507.js"
+      "static/chunks/pages/telegram-webapp-62662d2afa7a1f2d.js"
     ]
   },
   "ampFirstPages": []

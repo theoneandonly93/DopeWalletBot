@@ -16,9 +16,13 @@
     "bcryptjs": "^3.0.2",
     "bip39": "^3.1.0",
     "body-parser": "^1.20.2",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
     "node-telegram-bot-api": "^0.63.0",
     "python-shell": "^5.0.0"
   },

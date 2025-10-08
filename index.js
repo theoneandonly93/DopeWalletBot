@@ -3,6 +3,8 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
+import cookieParser from 'cookie-parser';
+import { verifyToken } from './utils/auth.js';
 import { spawn } from "child_process";
 import { createClient } from "@supabase/supabase-js";
 import { Connection, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
@@ -13,6 +15,17 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
+
+// simple middleware to populate req.user from jwt cookie
+app.use((req, res, next) => {
+  const token = req.cookies?.session || null;
+  if (token) {
+    const user = verifyToken(token);
+    if (user) req.user = user;
+  }
+  next();
+});
 
 const PORT = process.env.PORT || 5000;
 
@@ -154,11 +167,13 @@ import walletRoutes from "./routes/wallet.js";
 import swapRoutes from "./routes/swap.js";
 import profileRoutes from "./routes/profile.js";
 import aiRoutes from "./routes/ai.js";
+import telegramRoutes from "./routes/telegram.js";
 
 app.use("/wallet", walletRoutes);
 app.use("/swap", swapRoutes);
 app.use("/profile", profileRoutes);
 app.use("/ai", aiRoutes);
+app.use("/telegram", telegramRoutes);
 
 // Root
 app.get("/", (req, res) => res.send("🚀 DopeWallet backend is running"));

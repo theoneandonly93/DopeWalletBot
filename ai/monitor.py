@@ -17,8 +17,15 @@ warnings.filterwarnings("ignore")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://wjyqpjssxoxwmlyldgpf.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 DEX_API_URL = os.getenv("DEX_API_URL", "https://api.dexscreener.com/token-boosts/top/v1")
+OPEN_AI_KEY = os.getenv("OPEN_AI_API_KEY") or os.getenv("OPENAI_API_KEY")
+MONITOR_CALL_OPENAI = os.getenv("MONITOR_CALL_OPENAI", "false").lower() in ("1", "true", "yes")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+if OPEN_AI_KEY:
+    print('[AI] OPEN_AI_API_KEY detected in environment')
+else:
+    print('[AI] OPEN_AI_API_KEY not set; OpenAI features disabled')
 
 # --------------------------
 # MODEL PLACEHOLDER
@@ -180,7 +187,25 @@ def main(run_once=False):
                 supabase.table("ai_predictions").upsert(token).execute()
             except Exception as e:
                 print("Supabase insert error:", e)
-
+        # Optionally call OpenAI to summarize the ranked tokens
+        if OPEN_AI_KEY and MONITOR_CALL_OPENAI:
+            try:
+                top_list = ranked[['symbol','address','score']].to_dict(orient='records')
+                prompt = f"Summarize these top tokens and why they might be interesting: {top_list[:10]}"
+                headers = { 'Content-Type': 'application/json', 'Authorization': f'Bearer {OPEN_AI_KEY}' }
+                payload = { 'model': 'gpt-3.5-turbo', 'messages': [ {'role':'user','content': prompt } ], 'max_tokens': 200 }
+                r = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=payload, timeout=30)
+                if r.status_code == 200:
+                    j = r.json()
+                    summary = j.get('choices', [{}])[0].get('message', {}).get('content', '')
+                    # crude token estimate: use characters/4 ~ tokens
+                    estimated_tokens = int(len(prompt)/4) + 200
+                    cost_estimate = estimated_tokens / 1000 * 0.002  # approx price for gpt-3.5-turbo
+                    print(f"[AI] OpenAI summary (est cost ${cost_estimate:.6f}):\n", summary)
+                else:
+                    print('[AI] OpenAI API error', r.status_code, r.text[:200])
+            except Exception as e:
+                print('[AI] OpenAI call error', e)
         print(f"[AI] Updated {len(ranked)} token predictions.")
         if run_once:
             break
