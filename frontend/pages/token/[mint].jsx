@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
-import { Line } from 'react-chartjs-2';
-import 'chart.js/auto';
+import dynamic from 'next/dynamic';
+const Line = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), { ssr: false });
 import Link from 'next/link';
 
 export default function TokenDetail() {
@@ -115,7 +115,7 @@ export default function TokenDetail() {
       </div>
 
       <div className="fixed bottom-0 left-0 w-full bg-[#0D0D0D] border-t border-[#222] p-4 flex space-x-3">
-        <button className="flex-1 bg-[#3B82F6] py-3 rounded-xl font-semibold">Buy</button>
+        <button onClick={() => { try { localStorage.setItem('swap_prefill', JSON.stringify({ inputMint: 'So11111111111111111111111111111111111111112', outputMint: mint })); } catch(e){}; window.location.href = '/swap'; }} className="flex-1 bg-[#3B82F6] py-3 rounded-xl font-semibold">Buy</button>
         <button className="flex-1 bg-[#1F1F1F] py-3 rounded-xl font-semibold">Deposit</button>
       </div>
     </div>

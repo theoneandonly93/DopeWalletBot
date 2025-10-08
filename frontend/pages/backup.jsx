@@ -94,7 +94,7 @@ export default function BackupPage() {
                 className="mt-3 p-3 bg-[#0A0A0B] rounded-lg text-xs break-words"
                 style={{ whiteSpace: 'pre-wrap' }}
               >
-                {revealed ? vault.mnemonic : '•••• •••• •••• •••• •••• •••• •••• •••• •••• ••••'}
+                            {revealed ? vault.mnemonic : 'Hidden (reveal to show recovery phrase)'}
               </motion.pre>
 
               <div className="mt-3 flex items-center gap-2">

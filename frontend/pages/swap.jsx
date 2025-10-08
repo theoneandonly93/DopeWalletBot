@@ -22,6 +22,20 @@ export default function SwapPage(){
 
   useEffect(()=>{ (async()=>{ try{ const pw = sessionStorage.getItem("DW_LAST_PW"); if (pw) { const v = await loadVault(pw); setVault(v); } }catch{} })(); },[]);
 
+  // Read swap prefill (from token detail Buy button) if present
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('swap_prefill');
+      if (raw) {
+        const pref = JSON.parse(raw);
+        if (pref.inputMint) setInputMint(pref.inputMint);
+        if (pref.outputMint) setOutputMint(pref.outputMint);
+        // clear after consuming
+        localStorage.removeItem('swap_prefill');
+      }
+    } catch (e) { /* ignore */ }
+  }, []);
+
   // Fetch trending tokens from Birdeye
   useEffect(() => {
     (async () => {

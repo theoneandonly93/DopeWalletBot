@@ -19,10 +19,15 @@ export default function ProfileNew(){
       <div className="p-4 space-y-4">
         <div className="bg-card rounded-xl p-4 text-center space-y-3">
           <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center text-2xl">👻</div>
+            <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                <circle cx="12" cy="8" r="3" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" fill="none" />
+                <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+              </svg>
+            </div>
           </div>
           <div className="text-lg font-semibold">{vault ? "@" + vault.pubkey.slice(0,6) + "..." : "Anonymous"}</div>
-          <div className="text-sm text-textDim">The dopest wallet on Solana 🔥</div>
+          <div className="text-sm text-textDim">The dopest wallet on Solana</div>
           <div className="flex justify-center gap-6 text-sm text-textDim">
             <div className="text-center"><span className="font-semibold text-white">{followers}</span><br/>Followers</div>
             <div className="text-center"><span className="font-semibold text-white">{following}</span><br/>Following</div>
@@ -54,9 +59,9 @@ export default function ProfileNew(){
             <div className="text-sm font-semibold">Recent Activity</div>
             <button className="text-[#3B82F6] text-xs">View More ›</button>
           </div>
-          <div className="text-sm">👻 You swapped SOL → USDC</div>
-          <div className="text-sm">🔥 You followed BONK</div>
-          <div className="text-sm">🚀 You created your wallet</div>
+          <div className="text-sm">You swapped SOL → USDC</div>
+          <div className="text-sm">You followed BONK</div>
+          <div className="text-sm">You created your wallet</div>
         </div>
       </div>
 

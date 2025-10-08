@@ -9,9 +9,7 @@ export default function Onboarding({ onComplete }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleGetStarted = () => {
-    setStep(1);
-  };
+  const handleGetStarted = () => setStep(1);
 
   const handleCreateAccount = async () => {
     if (!password || password.length < 6) {
@@ -24,18 +22,20 @@ export default function Onboarding({ onComplete }) {
     }
     setLoading(true);
     setError("");
+
+    // Best-effort: try server onboarding but continue locally even if it fails
     try {
-      // Call backend to create wallet and store password (best-effort).
-      // If the backend is unavailable, still allow local onboarding.
-      await axios.post("/api/onboarding", { password }).catch(() => null);
+      await axios.post('/api/onboarding', { password }).catch(() => null);
     } catch (e) {
       // ignore server errors
-    } finally {
-      try { localStorage.setItem('dopewallet_signedin', 'true'); } catch (e) {}
-      try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) {}
-      onComplete();
-      setLoading(false);
     }
+
+    try {
+      localStorage.setItem('dopewallet_signedin', 'true');
+    } catch (e) {}
+    try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) {}
+    setLoading(false);
+    onComplete();
   };
 
   return (
@@ -54,6 +54,7 @@ export default function Onboarding({ onComplete }) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 10 }}
       />
+
       <div className="card bg-neutral text-white w-[90%] max-w-md p-8 shadow-2xl flex flex-col items-center">
         <h1 className="text-2xl font-bold mb-2">Welcome to DopeWallet</h1>
         {step === 0 && (
@@ -62,6 +63,7 @@ export default function Onboarding({ onComplete }) {
             <button className="btn btn-primary w-full" onClick={handleGetStarted}>Get Started</button>
           </>
         )}
+
         {step === 1 && (
           <>
             <p className="mb-4 text-center text-gray-300">Create a password to secure your wallet. You'll use this to sign in next time.</p>

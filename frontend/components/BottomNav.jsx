@@ -1,26 +1,62 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
 export default function BottomNav(){
   const r = useRouter();
-  const tab = r.pathname.startsWith("/swap")
+  const tab = r.pathname === '/' || r.pathname.startsWith("/profile")
+    ? "wallet"
+    : r.pathname.startsWith("/swap")
     ? "swap"
     : r.pathname.startsWith("/earn")
     ? "earn"
-    : r.pathname.startsWith("/profile")
-    ? "profile"
     : r.pathname.startsWith("/browser")
     ? "browser"
     : "wallet";
+  const Icon = ({name, active}) => {
+    const stroke = active ? 'white' : 'rgba(255,255,255,0.6)';
+    const size = 18;
+    if (name === 'Wallet') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <rect x="2" y="6" width="20" height="12" rx="2" stroke={stroke} strokeWidth="1.6" fill="none" />
+        <path d="M16 10h2v2" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+    if (name === 'Swap') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <path d="M4 7h11l-3-3" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M20 17H9l3 3" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+    if (name === 'Profile') return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <circle cx="12" cy="8" r="3" stroke={stroke} strokeWidth="1.6" fill="none" />
+        <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </svg>
+    );
+    // Browser / Compass
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+        <circle cx="12" cy="12" r="9" stroke={stroke} strokeWidth="1.6" fill="none" />
+        <path d="M9 15l6-3-3 6-3-3z" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </svg>
+    );
+  };
+
   const Item = ({href,label,active}) => (
     <Link href={href} className={`flex flex-col items-center text-xs ${active?"text-white":"text-textDim"}`}>
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${active?"bg-accent/20":"bg-[#171717]"}`}>{label==="Wallet"?"🔷":label==="Swap"?"🔁":label==="Profile"?"🪪":label==="Browser"?"🧭":"%"}</div>
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${active?"bg-accent/20":"bg-[#171717]"}`}>
+        <Icon name={label} active={active} />
+      </div>
       <div className="mt-1">{label}</div>
     </Link>
   );
+  // Wallet button should open the DopeWallet home page (root), which is the wallet UI.
+  const walletHref = '/';
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-bg border-t border-line py-2 flex justify-around">
-      <Item href="/" label="Wallet" active={tab==="wallet"} />
+    <nav className="fixed bottom-0 inset-x-0 bg-bg py-2 flex justify-around">
+      <Item href={walletHref} label="Wallet" active={tab==="wallet"} />
       <Item href="/swap" label="Swap" active={tab==="swap"} />
       <Item href="/profile" label="Profile" active={tab==="profile"} />
       <Item href="/browser" label="Browser" active={tab==="browser"} />

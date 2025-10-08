@@ -10,9 +10,50 @@ export default function Home() {
   const [vault, setVault] = useState(null);
   const [stage, setStage] = useState('choose');
   const [tempVault, setTempVault] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [tokens, setTokens] = useState([]);
+  const [usdBalance, setUsdBalance] = useState(null);
+  const [showDeposit, setShowDeposit] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
 
   useEffect(() => {
     try { readyTelegram(); } catch (e) { /* ignore */ }
+  }, []);
+
+  // Try to auto-load a saved vault if we have a remembered password or when signin events happen.
+  useEffect(() => {
+    let mounted = true;
+    async function tryLoadSaved() {
+      try {
+        const lastPw = sessionStorage.getItem('DW_LAST_PW');
+        const signed = localStorage.getItem('dopewallet_signedin');
+        const blob = sessionStorage.getItem('DW_VAULT_V1');
+        if (!blob) return;
+        // If we have a cached password, attempt to decrypt and set the vault so the wallet view shows.
+        if (lastPw) {
+          const v = await loadVault(lastPw);
+          if (v && mounted) {
+            setVault(v);
+            // If user was marked signed in, hide chooser
+            if (signed === 'true') {
+              try { window.dispatchEvent(new Event('dopewallet:signin')); } catch (e) {}
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to auto-load vault', err);
+      }
+    }
+    tryLoadSaved();
+
+    const onSignin = () => tryLoadSaved();
+    const onStorage = (e) => {
+      if (e.key === 'dopewallet_signedin' || e.key === 'DW_LAST_PW') tryLoadSaved();
+    };
+    window.addEventListener('dopewallet:signin', onSignin);
+    window.addEventListener('storage', onStorage);
+    return () => { mounted = false; window.removeEventListener('dopewallet:signin', onSignin); window.removeEventListener('storage', onStorage); };
   }, []);
 
   async function handleNewWallet() {
@@ -51,7 +92,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-bg text-white flex flex-col pb-24">
-      <Header />
+      {/* Do not show Header on the initial login/chooser flow. Only show when a vault is unlocked. */}
+      {vault && <Header />}
 
       {/* --- choose screen --- */}
       {stage === 'choose' && !vault && (
@@ -130,12 +172,122 @@ export default function Home() {
       )}
 
       {vault && (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center space-y-3">
-          <div className="text-lg font-semibold">Welcome back</div>
-          <div className="text-xs text-textDim">{vault.pubkey.slice(0, 4)}...{vault.pubkey.slice(-4)}</div>
-          <button onClick={() => { localStorage.setItem('dopewallet_signedin','true'); try { window.dispatchEvent(new Event('dopewallet:signin')); } catch(e){}; router.push('/profile'); }} className="bg-accent rounded-xl py-2 px-6">
-            Enter Wallet
-          </button>
+        <div className="flex-1 w-full max-w-3xl mx-auto px-4 py-6">
+          <div className="text-center mb-4">
+            <div className="text-sm text-textDim">Address</div>
+            <div className="font-mono text-sm text-white break-words mx-auto max-w-lg">{vault.pubkey}</div>
+          </div>
+
+          <div className="text-center mb-4">
+            <div className="text-sm text-textDim">USD Value</div>
+            <div className="text-3xl font-extrabold text-white">{usdBalance !== null ? `$${usdBalance}` : '$0.00'}</div>
+            <div className="text-7xl font-extrabold text-white mt-1 tracking-tight">{balance !== null ? `${balance} SOL` : '—'}</div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <button onClick={() => setShowDeposit(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v8m-4-4h8" />
+              </svg>
+              <div>Deposit</div>
+            </button>
+
+            <button onClick={() => setShowTransfer(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 19v.01M5 12h.01M19 12h.01M6.2 6.2l.01.01M17.8 17.8l.01.01M6.2 17.8l.01.01M17.8 6.2l.01.01" />
+              </svg>
+              <div>Transfer</div>
+            </button>
+
+            <button onClick={() => setShowWithdraw(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a4 4 0 00-4-4H7a4 4 0 00-4 4v2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 13v4a2 2 0 002 2h6a2 2 0 002-2v-4" />
+              </svg>
+              <div>Withdraw</div>
+            </button>
+          </div>
+
+          <div className="bg-card rounded-xl border border-line p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-semibold">Token Holdings</div>
+              <div className="text-xs text-textDim">{tokens.length} tokens</div>
+            </div>
+            <div className="space-y-2">
+              {tokens.length === 0 && (
+                <div className="text-textDim text-sm">No tokens found. Your SOL balance and tokens will appear here.</div>
+              )}
+              {tokens.map((t) => (
+                <div key={t.mint || t.address} className="flex items-center justify-between bg-[#0b0b0d] rounded-lg p-2">
+                  <div className="flex items-center space-x-3">
+                    <img src={t.logoURI || '/token-placeholder.png'} alt={t.symbol} className="w-8 h-8 rounded-full" />
+                    <div>
+                      <div className="text-sm font-medium">{t.symbol || t.name}</div>
+                      <div className="text-xs text-textDim">{t.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-medium">{t.uiAmountString || t.amount || '0'}</div>
+                    <div className="text-xs text-textDim">${t.usdValue || '0.00'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-card rounded-xl p-4">
+            <div className="font-semibold mb-2">Activity</div>
+            <div className="text-textDim text-sm">Recent transfers, swaps, and deposits will show here.</div>
+          </div>
+
+          {/* Deposit Modal */}
+          {showDeposit && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowDeposit(false)} />
+              <div className="relative bg-bg rounded-xl w-full max-w-md p-4">
+                <div className="font-semibold mb-2">Deposit</div>
+                <div className="text-sm text-textDim mb-4">Send SOL to this address to deposit into your wallet.</div>
+                <div className="bg-[#0b0b0d] rounded-lg p-3 font-mono text-sm break-words mb-4">{vault.pubkey}</div>
+                <div className="flex justify-end">
+                  <button onClick={() => setShowDeposit(false)} className="px-4 py-2 bg-card rounded-lg">Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Withdraw Modal */}
+          {showWithdraw && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowWithdraw(false)} />
+              <div className="relative bg-bg rounded-xl w-full max-w-md p-4">
+                <div className="font-semibold mb-2">Withdraw</div>
+                <div className="text-sm text-textDim mb-4">Enter an address and amount to withdraw SOL.</div>
+                <input placeholder="Destination address" className="w-full bg-[#0b0b0d] rounded-lg p-2 mb-2" />
+                <input placeholder="Amount (SOL)" className="w-full bg-[#0b0b0d] rounded-lg p-2 mb-4" />
+                <div className="flex justify-end">
+                  <button onClick={() => setShowWithdraw(false)} className="px-4 py-2 bg-card rounded-lg">Cancel</button>
+                  <button className="ml-2 px-4 py-2 bg-accent rounded-lg">Withdraw</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Transfer Modal */}
+          {showTransfer && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowTransfer(false)} />
+              <div className="relative bg-bg rounded-xl w-full max-w-md p-4">
+                <div className="font-semibold mb-2">Transfer</div>
+                <div className="text-sm text-textDim mb-4">Quick send SOL or tokens to another wallet.</div>
+                <input placeholder="Recipient address" className="w-full bg-[#0b0b0d] rounded-lg p-2 mb-2" />
+                <input placeholder="Amount" className="w-full bg-[#0b0b0d] rounded-lg p-2 mb-4" />
+                <div className="flex justify-end">
+                  <button onClick={() => setShowTransfer(false)} className="px-4 py-2 bg-card rounded-lg">Cancel</button>
+                  <button className="ml-2 px-4 py-2 bg-accent rounded-lg">Send</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

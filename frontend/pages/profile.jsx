@@ -147,11 +147,16 @@ export default function Profile() {
         <div className="card bg-card rounded-xl p-4 text-center space-y-3">
           <div className="flex justify-center">
             <div className="avatar">
-              <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center text-2xl">👻</div>
+              <div className="w-16 h-16 rounded-full bg-[#222] flex items-center justify-center">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                  <circle cx="12" cy="8" r="3" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" fill="none" />
+                  <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6" stroke="rgba(255,255,255,0.7)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                </svg>
+              </div>
             </div>
           </div>
           <div className="text-lg font-semibold">{profile?.display_name || (vault ? "@" + vault.pubkey.slice(0, 6) + "..." : "Anonymous")}</div>
-          <div className="text-sm text-textDim">{profile?.bio || "The dopest wallet on Solana 🔥"}</div>
+          <div className="text-sm text-textDim">{profile?.bio || "The dopest wallet on Solana"}</div>
           <div className="stats stats-vertical sm:stats-horizontal shadow-none bg-transparent p-0">
             <div className="stat">
               <div className="stat-value">{profile?.followers ?? '-'}</div>

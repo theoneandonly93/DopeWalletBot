@@ -6,7 +6,15 @@ import Splash from '../components/Splash';
 import { useRouter } from 'next/router';
 
 export default function App({ Component, pageProps }) {
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      if (typeof window === 'undefined') return false;
+      const signedIn = localStorage.getItem('dopewallet_signedin');
+      return !signedIn;
+    } catch (e) {
+      return false;
+    }
+  });
   const router = useRouter();
   const [navKey, setNavKey] = useState(router.pathname);
 
@@ -57,7 +65,7 @@ export default function App({ Component, pageProps }) {
       </Head>
       <main data-theme="phantomdark">
         <Splash trigger={navKey} />
-        {showOnboarding ? (
+        {showOnboarding && router.pathname === '/' ? (
           <Onboarding onComplete={handleOnboardingComplete} />
         ) : (
           <Component {...pageProps} />

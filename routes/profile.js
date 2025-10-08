@@ -100,4 +100,24 @@ router.post("/privacy", async (req, res) => {
   }
 });
 
+/**
+ * GET /profile/by_telegram/:telegramId
+ * Fetch profile by Telegram ID (non-mutating)
+ */
+router.get("/by_telegram/:telegramId", async (req, res) => {
+  try {
+    const { telegramId } = req.params;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("username, display_name, wallet_pubkey, avatar_url, bio, private, followers, following")
+      .eq("telegram_id", telegramId)
+      .single();
+    if (error) throw new Error(error.message);
+    if (data.private) return res.status(403).json({ error: "Profile is private" });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
