@@ -40,19 +40,31 @@ export default function SwapPage(){
   useEffect(() => {
     (async () => {
       try {
-        const key = process.env.NEXT_PUBLIC_BIRDEYE_API_KEY || '';
-        const res = await fetch('https://public-api.birdeye.so/public/trending?sort_by=volume_24h', {
-          headers: key ? { 'X-API-KEY': key } : {},
-        });
+        const res = await fetch('/api/dex/trending');
         const body = await res.json();
-        const items = (body?.data || []).map((it) => ({
-          address: it.address || it.mint || it.id,
-          logoURI: it.logo || it.logoURI || it.image || '',
-          symbol: it.symbol || it.ticker || it.name || '',
-          price: Number(it.price || it.value || it.last_price || 0),
-          change24h: Number(it.change_24h || it.price_change_24h || 0),
-          volume24h: Number(it.volume_24h || it.volume || 0),
-        }));
+
+        // Support multiple response shapes: our proxy { data: [...] }, DexScreener { pairs: [...] } or direct array
+        const rawList = body?.data || body?.pairs || body || [];
+
+        const items = (Array.isArray(rawList) ? rawList : []).map((it) => {
+          // DexScreener pair/item variations
+          const tokenAddress = it.tokenAddress || it.address || it.pairAddress || it.baseToken?.address || it.quoteToken?.address || it.id || '';
+          const logoURI = it.icon || it.logo || it.logoURI || it.tokenIcon || it.baseToken?.icon || it.quoteToken?.icon || '';
+          const symbol = it.symbol || it.tokenSymbol || it.token?.symbol || it.baseToken?.symbol || it.quoteToken?.symbol || it.name || '';
+
+          const price = Number(it.priceUsd || it.price || it.tokenPrice || it.price_usd || it.baseToken?.price || 0) || 0;
+          const change24h = Number(it.priceChange || it.change || it.change_24h || it.price_change_percentage_24h || 0) || 0;
+          const volume24h = Number(it.volume || it.volume24h || it.volume_24h || it.quoteVolume || it.liquidity || 0) || 0;
+
+          return {
+            address: tokenAddress,
+            logoURI,
+            symbol,
+            price,
+            change24h,
+            volume24h,
+          };
+        });
         setTrending(items);
       } catch (e) {
         console.error('Trending fetch failed', e);
@@ -103,11 +115,7 @@ export default function SwapPage(){
   }
 
   useEffect(()=>{
-    setTrending([
-      { name: "SOL", symbol: "SOL", price: 144.22, change: -3.4, logo: "/sol.png" },
-      { name: "USDC", symbol: "USDC", price: 1.0, change: 0.02, logo: "/usdc.png" },
-      { name: "BONK", symbol: "BONK", price: 0.000028, change: 8.3, logo: "/bonk.png" },
-    ]);
+    // No local mock override — rely on the API proxy for trending tokens.
   },[]);
 
   return (

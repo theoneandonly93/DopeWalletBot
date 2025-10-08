@@ -48,13 +48,18 @@ export default function BottomNav(){
   const Item = ({ href, label, active }) => {
     const handleNav = (e) => {
       e?.preventDefault?.();
-      try { r.push(href); } catch (err) { /* ignore */ }
+      try { r.push(href); } catch (err) { /* fallback */ window.location.href = href; }
+    };
+    const handleTouch = (e) => {
+      // ensure immediate navigation on touch devices
+      try { r.push(href); } catch (err) { window.location.href = href; }
     };
     return (
       <div
         role="button"
         tabIndex={0}
         onClick={handleNav}
+        onTouchStart={handleTouch}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNav(); } }}
         className={`flex flex-col items-center text-xs px-3 py-3 touch-manipulation w-20 ${active?"text-white":"text-textDim"} cursor-pointer`}
       >
@@ -70,7 +75,7 @@ export default function BottomNav(){
   const walletHref = '/';
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-bg py-2 flex justify-around">
+    <nav className="fixed bottom-0 inset-x-0 bg-bg py-2 flex justify-around z-50 pointer-events-auto">
       <Item href={walletHref} label="Wallet" active={tab==="wallet"} />
       <Item href="/swap" label="Swap" active={tab==="swap"} />
       <Item href="/profile" label="Profile" active={tab==="profile"} />

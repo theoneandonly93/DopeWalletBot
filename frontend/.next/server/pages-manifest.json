@@ -2,6 +2,7 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
+  "/swap": "pages/swap.js",
   "/": "pages/index.js",
-  "/api/balance": "pages/api/balance.js"
+  "/api/dex/trending": "pages/api/dex/trending.js"
 }

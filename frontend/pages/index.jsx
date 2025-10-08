@@ -207,56 +207,55 @@ export default function Home() {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(vault.pubkey);
-                    setToast('Address copied to clipboard');
-                    setTimeout(() => setToast(null), 1800);
+                    setToast('Address copied');
+                    setTimeout(() => setToast(null), 1600);
                   } catch (e) {
                     console.error('copy failed', e);
                     setToast('Copy failed');
-                    setTimeout(() => setToast(null), 1800);
+                    setTimeout(() => setToast(null), 1600);
                   }
                 }}
-                className="font-mono text-sm text-white/80 font-semibold break-words mx-auto max-w-lg text-left hover:underline cursor-pointer"
+                className="font-mono text-sm sm:text-base text-gray-300 font-semibold truncate max-w-xs sm:max-w-md mx-auto hover:underline cursor-pointer"
                 aria-label="Copy address"
+                title={vault.pubkey}
+                style={{ letterSpacing: '0.2px' }}
               >
-                {vault.pubkey}
+                <span className="hidden sm:inline">{vault.pubkey}</span>
+                <span className="inline sm:hidden">{`${vault.pubkey.slice(0,6)}...${vault.pubkey.slice(-6)}`}</span>
               </button>
             </div>
           </div>
 
           {/* Toast */}
           {toast && (
-            <div className="fixed right-4 bottom-24 z-50">
-              <div className="bg-black/80 text-white text-sm px-3 py-2 rounded-md shadow-lg">{toast}</div>
+            <div className="fixed right-4 bottom-24 z-50" role="status" aria-live="polite">
+              <div className="flex items-center bg-black/80 text-white text-sm px-3 py-2 rounded-md shadow-lg">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="mr-2" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div>{toast}</div>
+              </div>
             </div>
           )}
 
           <div className="text-center mb-4">
             <div className="text-sm text-textDim">USD Value</div>
-            <div className="text-3xl font-extrabold text-white">{usdBalance !== null ? `$${usdBalance}` : '$0.00'}</div>
+            <div className="text-4xl sm:text-5xl font-extrabold text-white leading-tight">{usdBalance !== null ? `$${typeof usdBalance === 'number' ? usdBalance.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : usdBalance}` : '$0.00'}</div>
             {/* SOL display removed per design — show USD only */}
           </div>
 
           <div className="grid grid-cols-3 gap-3 mb-4">
-            <button onClick={() => setShowDeposit(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v8m-4-4h8" />
-              </svg>
-              <div>Deposit</div>
+            <button onClick={() => setShowDeposit(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition touch-manipulation" style={{minHeight:56}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 5v14" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 9h8" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div className="text-sm">Deposit</div>
             </button>
 
-            <button onClick={() => setShowTransfer(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 19v.01M5 12h.01M19 12h.01M6.2 6.2l.01.01M17.8 17.8l.01.01M6.2 17.8l.01.01M17.8 6.2l.01.01" />
-              </svg>
-              <div>Transfer</div>
+            <button onClick={() => setShowTransfer(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition touch-manipulation" style={{minHeight:56}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 12H3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 5l7 7-7 7" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div className="text-sm">Transfer</div>
             </button>
 
-            <button onClick={() => setShowWithdraw(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a4 4 0 00-4-4H7a4 4 0 00-4 4v2" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 13v4a2 2 0 002 2h6a2 2 0 002-2v-4" />
-              </svg>
-              <div>Withdraw</div>
+            <button onClick={() => setShowWithdraw(true)} className="col-span-1 bg-card rounded-xl p-3 text-center flex flex-col items-center justify-center gap-2 hover:shadow-md transition touch-manipulation" style={{minHeight:56}}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M21 8v6a2 2 0 01-2 2H5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M7 12h10" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div className="text-sm">Withdraw</div>
             </button>
           </div>
 
