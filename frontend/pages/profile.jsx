@@ -8,7 +8,7 @@ export default function Profile() {
   const [showSettings, setShowSettings] = useState(false);
   const [network, setNetwork] = useState("mainnet");
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://your-backend-url.onrender.com";
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;

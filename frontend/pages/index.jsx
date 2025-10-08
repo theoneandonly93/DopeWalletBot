@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import Navigation from "../components/navigation";
 import TokenChartModal from "../components/TokenChartModal";
+import ActionModal from "../components/ActionModal";
 
 export default function Home() {
   const [wallet, setWallet] = useState(null);
@@ -12,15 +13,32 @@ export default function Home() {
   const [tokens, setTokens] = useState([]);
   const [selectedToken, setSelectedToken] = useState(null);
   const [tokenPrices, setTokenPrices] = useState({});
+  const [actionModal, setActionModal] = useState({ open: false, type: null });
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://your-backend-url.onrender.com";
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
+
+  const LOCAL_DEV = process.env.NEXT_PUBLIC_LOCAL_DEV === 'true' || process.env.NODE_ENV === 'development';
 
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     tg?.expand();
 
     const telegramId = tg?.initDataUnsafe?.user?.id;
+
+    // If running outside of the Telegram WebApp (e.g. dev), show demo data so UI is visible.
     if (!telegramId) {
+      if (LOCAL_DEV) {
+        const demoTokens = [
+          { symbol: "USDC", mint: "So11111111111111111111111111111111111111112", amount: 12.5 },
+          { symbol: "RAY", mint: "RaydiumDemoMint", amount: 3 },
+        ];
+        setWallet("DemoWalletPubKey");
+        setBalance(1.234);
+        setTokens(demoTokens);
+        setTokenPrices({ USDC: 1.0, RAY: 2.5 });
+        setLoading(false);
+        return;
+      }
       setError("No Telegram user detected");
       setLoading(false);
       return;
@@ -59,7 +77,10 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
       <div className="p-4">
-        <h1 className="text-xl font-bold mb-3">👻 DopeWallet</h1>
+        <div className="flex items-center gap-3 mb-3">
+          <img src="/logo-512.png" alt="DopeWallet Logo" className="w-8 h-8 rounded-full" />
+          <h1 className="text-xl font-bold">DopeWallet</h1>
+        </div>
 
         {loading && <p className="text-gray-400">Loading wallet...</p>}
         {error && <p className="text-red-500">{error}</p>}
@@ -77,9 +98,24 @@ export default function Home() {
               <p className="truncate text-xs text-gray-500 mb-2">{wallet}</p>
               <h3 className="text-4xl font-bold mt-2 mb-2">{balance?.toFixed(3)} SOL</h3>
               <div className="flex gap-3 mb-2">
-                <button className="btn btn-sm bg-green-600 text-white font-semibold shadow-md">Buy</button>
-                <button className="btn btn-sm bg-blue-600 text-white font-semibold shadow-md">Send</button>
-                <button className="btn btn-sm bg-purple-600 text-white font-semibold shadow-md">Receive</button>
+                <button
+                  className="btn btn-sm bg-green-600 text-white font-semibold shadow-md"
+                  onClick={() => setActionModal({ open: true, type: 'buy' })}
+                >
+                  Buy
+                </button>
+                <button
+                  className="btn btn-sm bg-blue-600 text-white font-semibold shadow-md"
+                  onClick={() => setActionModal({ open: true, type: 'send' })}
+                >
+                  Send
+                </button>
+                <button
+                  className="btn btn-sm bg-purple-600 text-white font-semibold shadow-md"
+                  onClick={() => setActionModal({ open: true, type: 'receive' })}
+                >
+                  Receive
+                </button>
               </div>
               <button
                 className="btn btn-xs bg-phantom-accent text-white mt-2"
@@ -128,6 +164,12 @@ export default function Home() {
       </div>
 
       <Navigation active="home" />
+      <ActionModal
+        open={actionModal.open}
+        type={actionModal.type}
+        onClose={() => setActionModal({ open: false, type: null })}
+        onSubmit={({ type, form }) => console.log('Action submit', type, form)}
+      />
     </div>
   );
 }

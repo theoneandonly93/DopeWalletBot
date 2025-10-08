@@ -11,7 +11,24 @@ import bs58 from "bs58";
 import { mnemonicToSeedSync, generateMnemonic } from "bip39";
 import nacl from "tweetnacl";
 
-const connection = new Connection(process.env.RPC_URL, "confirmed");
+// Lazily created connection. Don't create at module import time because
+// that will throw if RPC_URL is not set or invalid (causes server-side 500s
+// during import). Instead create when needed with a helpful error message.
+let _connection = null;
+function getRpcUrl() {
+  const url = process.env.RPC_URL || process.env.NEXT_PUBLIC_RPC_URL;
+  return url;
+}
+
+function getConnection() {
+  if (_connection) return _connection;
+  const rpcUrl = getRpcUrl();
+  if (!rpcUrl || !(rpcUrl.startsWith('http://') || rpcUrl.startsWith('https://'))) {
+    throw new TypeError('RPC_URL is missing or invalid. Set process.env.RPC_URL to a valid http(s) RPC endpoint.');
+  }
+  _connection = new Connection(rpcUrl, 'confirmed');
+  return _connection;
+}
 
 /**
  * Generate a new wallet (mnemonic + keypair)
@@ -31,6 +48,7 @@ export const createWallet = () => {
  * Get SOL balance
  */
 export const getBalance = async (pubkey) => {
+  const connection = getConnection();
   const balance = await connection.getBalance(new PublicKey(pubkey));
   return balance / LAMPORTS_PER_SOL;
 };
@@ -39,6 +57,7 @@ export const getBalance = async (pubkey) => {
  * Send SOL between wallets
  */
 export const sendSol = async (fromSecret, toAddress, amountSol) => {
+  const connection = getConnection();
   const sender = Keypair.fromSecretKey(bs58.decode(fromSecret));
   const transaction = new Transaction().add(
     SystemProgram.transfer({

@@ -9,6 +9,7 @@
     "ai": "python3 ai/monitor.py"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@solana/web3.js": "^1.98.0",
     "@supabase/supabase-js": "^2.43.0",
     "axios": "^1.7.0",

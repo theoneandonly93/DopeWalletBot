@@ -10,7 +10,7 @@ export default function Swap() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://your-backend-url.onrender.com";
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
 
   const handleQuote = async () => {
     if (!amount || !outputMint) return;

@@ -14,7 +14,7 @@ root = "."
 start = "npm start"
 
 [env]
-NEXT_PUBLIC_BACKEND_URL = "https://your-backend-url.onrender.com"
+NEXT_PUBLIC_BACKEND_URL = "https://dopewalletbot-production.up.railway.app"
 SUPABASE_URL = "your-supabase-url"
 SUPABASE_KEY = "your-supabase-key"
 RPC_URL = "your-solana-rpc-url"

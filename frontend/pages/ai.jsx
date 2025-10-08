@@ -10,7 +10,7 @@ export default function AIInsights() {
   const [error, setError] = useState(null);
   const [selectedToken, setSelectedToken] = useState(null);
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://your-backend-url.onrender.com";
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
 
   useEffect(() => {
     const fetchPredictions = async () => {

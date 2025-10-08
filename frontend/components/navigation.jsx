@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useState } from "react";
 import SplashScreen from "./SplashScreen";
+import Icon from "./Icon";
 
 export default function Navigation({ active }) {
   const router = useRouter();
@@ -8,10 +9,10 @@ export default function Navigation({ active }) {
   const [pendingRoute, setPendingRoute] = useState(null);
 
   const tabs = [
-    { name: "home", icon: "🏠", route: "/" },
-    { name: "swap", icon: "💱", route: "/swap" },
-    { name: "browser", icon: "🌐", route: "/browser" },
-    { name: "profile", icon: "👤", route: "/profile" },
+    { name: 'home', icon: <Icon name="home" />, route: '/' },
+    { name: 'swap', icon: <Icon name="swap" />, route: '/swap' },
+    { name: 'browser', icon: <Icon name="browser" />, route: '/browser' },
+    { name: 'profile', icon: <Icon name="profile" />, route: '/profile' },
   ];
 
   const handleTabClick = (route) => {
