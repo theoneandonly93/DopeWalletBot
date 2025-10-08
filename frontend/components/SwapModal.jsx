@@ -81,6 +81,28 @@ export default function SwapModal({ onClose, tokenMint, tokenSymbol }) {
     finally{ setLoading(false); }
   }
 
+  async function handleUnifiedSwap(){
+    setLoading(true);
+    try{
+      const pw = localStorage.getItem('DW_LAST_PW');
+      let pubkey = null;
+      if (pw) {
+        try{ const v = await loadVault(pw); pubkey = v?.pubkey; }catch(e){}
+      }
+      if (!pubkey) {
+        try{ const parsed = JSON.parse(localStorage.getItem('DW_VAULT_V1')||'null'); pubkey = parsed?.pubkey || null; }catch(e){}
+      }
+      if (!pubkey) return alert('Unlock wallet first');
+      const solMint = 'So11111111111111111111111111111111111111112';
+      const amt = Math.round(Number(amount) * 1e9);
+      const r = await fetch('/api/swap/unified', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromToken: solMint, toToken: tokenMint, amount: amt, userPubkey: pubkey }) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'Swap failed');
+      alert('Unified swap routed: ' + JSON.stringify(j.result).slice(0,200));
+    }catch(e){ console.error(e); alert('Unified swap failed: ' + (e?.message||e)); }
+    finally{ setLoading(false); }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
       <div className="bg-[#111] rounded-2xl p-6 w-[90%] max-w-sm text-white">
@@ -95,6 +117,10 @@ export default function SwapModal({ onClose, tokenMint, tokenSymbol }) {
         <div className="flex gap-3">
           <button onClick={handleQuote} className="flex-1 bg-[#3B82F6] py-2 rounded-xl font-semibold text-sm">{loading ? 'Fetching...' : 'Get Quote'}</button>
           {quote && (<button onClick={handleSwap} className="flex-1 bg-[#16a34a] py-2 rounded-xl font-semibold text-sm">{loading ? 'Swapping...' : 'Swap'}</button>)}
+        </div>
+
+        <div className="mt-3">
+          <button onClick={handleUnifiedSwap} className="w-full bg-[#f59e0b] py-2 rounded-xl font-semibold text-sm">{loading ? 'Routing...' : 'Unified Swap (auto-router)'}</button>
         </div>
 
         {quote && (

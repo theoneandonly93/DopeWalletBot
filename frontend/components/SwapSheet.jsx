@@ -32,7 +32,7 @@ export default function SwapSheet({ pubkey }){
       const sig = await conn.sendTransaction(tx, { skipPreflight: true, maxRetries: 3 });
       setMsg(`Sent! ${sig}`);
       await conn.confirmTransaction(sig, "confirmed");
-  alert("Swap complete\n" + sig);
+      alert("Swap complete ✅\n" + sig);
     } catch (e){ console.error(e); alert("Swap failed: " + (e?.message ?? e)); }
     finally { setLoading(false); setMsg(null); }
   }

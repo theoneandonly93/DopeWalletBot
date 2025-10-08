@@ -35,7 +35,7 @@ export default function WalletTokenPage({ token }){
     try{ const conn = new Connection(RPC_URL); const lamports = await conn.getBalance(new PublicKey(pk)); setBalance(lamports / 1e9); }catch(e){ setBalance(0); }
   }
 
-  if (!token) return <div className="min-h-screen bg-[#0D0D0D] text-white">Token not found</div>;
+  const safeToken = token || { name: mint || 'Unknown', symbol: '', logo: '/token-placeholder.png', price: 0, chartData: null };
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] text-white pb-24">
@@ -95,13 +95,9 @@ export async function getServerSideProps(context){
 
   if (!token){
     try{
-      const envBase = process.env.NEXT_PUBLIC_BASE_URL;
-      const defaultPort = process.env.PORT || 3000;
-      const base = envBase || `http://localhost:${defaultPort}`;
-      const root = String(base).replace(/\/+$/,'');
-      const url = `${root}/api/dex/trending?chain=solana&limit=500`;
-      const r = await fetch(url);
-      if (r.ok){ const body = await r.json(); const found = (body?.data||[]).find(it=>String(it.address).toLowerCase()===String(mint).toLowerCase()); if (found) token = { name: found.name, symbol: found.symbol, logo: found.logoURI, price: found.price, chartData: found.chartData || null }; }
+      // Try DexScreener token info by searching pairs (best-effort)
+      const ds = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(mint)}`);
+      if (ds.ok){ const dj = await ds.json(); const found = (dj?.pairs || []).find(p => (p?.tokenAddress || '').toLowerCase() === String(mint).toLowerCase() || (p?.baseToken?.address || '').toLowerCase() === String(mint).toLowerCase()); if (found) token = { name: found.baseToken?.name || found?.token || mint, symbol: found.baseToken?.symbol || found?.symbol || '', logo: found.baseToken?.logoURI || found?.baseToken?.logoURI || found?.tokenLogo || '' , price: found.priceUsd || 0, chartData: null }; }
     }catch(e){}
   }
 

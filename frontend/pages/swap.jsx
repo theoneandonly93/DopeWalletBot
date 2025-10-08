@@ -3,8 +3,8 @@ import Header from "../components/Header";
 import BottomNav from "../components/BottomNav";
 import TokenList from "../components/TokenList";
 import { jupQuote, jupSwapTx } from "../lib/api";
-import pancake, { PANCAKE_ROUTER } from '../utils/pancake';
-import { Wallet, providers, Contract, parseUnits } from 'ethers';
+import * as bscSwap from "../lib/bscSwap";
+import { ethers } from 'ethers';
 import { loadVault } from "../lib/wallet";
 
 export default function SwapPage(){
@@ -78,28 +78,10 @@ export default function SwapPage(){
     if (!vault) return alert("Unlock your wallet first.");
     try {
       setLoading(true);
-      if (chain === 'bsc'){
-        try{
-          const rpc = process.env.NEXT_PUBLIC_BSC_RPC || process.env.NEXT_PUBLIC_RPC;
-          const provider = new providers.JsonRpcProvider(rpc);
-          // Use pancakeswap contract to getAmountsOut
-          const routerAbi = [ 'function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)' ];
-          const router = new Contract(PANCAKE_ROUTER, routerAbi, provider);
-          // amount handling: assume amount is in token units already; proper decimals handling will be added later
-          const amountIn = parseUnits(String(amount || '0'), 6); // naive default 6 decimals
-          const path = [inputMint, outputMint];
-          const amounts = await router.getAmountsOut(amountIn, path);
-          // amounts is an array of BigNumber; present the last as expected out
-          const out = amounts[amounts.length - 1];
-          setQuote({ chain: 'bsc', amounts: amounts.map(a => a.toString()), out: out.toString() });
-          setPrice('0.00');
-        }catch(e){ console.error('BSC quote failed', e); alert('BSC quote failed: ' + (e?.message||e)); }
-      } else {
-        const q = await jupQuote(inputMint, outputMint, amount);
-        // backend returns Jupiter quote object — store it
-        setQuote(q);
-        setPrice(parseFloat(q.outAmountUSD || 0).toFixed(2));
-      }
+      const q = await jupQuote(inputMint, outputMint, amount);
+      // backend returns Jupiter quote object — store it
+      setQuote(q);
+      setPrice(parseFloat(q.outAmountUSD || 0).toFixed(2));
     } catch (e) {
       console.error(e);
       alert("Quote failed: " + (e?.message || e));
@@ -122,51 +104,14 @@ export default function SwapPage(){
       const unlocked = await loadVault(pw);
       if (!unlocked?.pkBase58) throw new Error("Unable to unlock vault or private key missing.");
 
-      if (chain === 'bsc'){
-        try{
-          // Use mnemonic from unlocked vault to derive an EVM wallet
-          const mnemonic = unlocked.mnemonic;
-          if (!mnemonic) throw new Error('Mnemonic not available in vault for EVM signing.');
-          const rpc = process.env.NEXT_PUBLIC_BSC_RPC || process.env.NEXT_PUBLIC_RPC;
-          const provider = new providers.JsonRpcProvider(rpc);
-          // derive first account for Ethereum
-          const wallet = Wallet.fromMnemonic(mnemonic, "m/44'/60'/0'/0/0").connect(provider);
-
-          // prepare amounts
-          const amountIn = parseUnits(String(amount || '0'), 6);
-          // compute amountsOut via contract
-          const routerAbi = [ 'function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)', 'function swapExactTokensForTokens(uint amountIn,uint amountOutMin,address[] calldata path,address to,uint deadline) returns (uint[] memory amounts)' ];
-          const router = new Contract(PANCAKE_ROUTER, routerAbi, wallet);
-          const amounts = await router.getAmountsOut(amountIn, [inputMint, outputMint]);
-          const out = amounts[amounts.length - 1];
-          // set a slippage of 5%
-          const amountOutMin = out.mul(95).div(100);
-
-          // Approve input token to router if needed
-          const erc20Abi = [ 'function approve(address spender, uint256 amount) returns (bool)', 'function allowance(address owner,address spender) view returns (uint256)' ];
-          const tokenIn = new Contract(inputMint, erc20Abi, wallet);
-          const owner = await wallet.getAddress();
-          const allowance = await tokenIn.allowance(owner, PANCAKE_ROUTER);
-          if (allowance.lt(amountIn)){
-            const tx = await tokenIn.approve(PANCAKE_ROUTER, amountIn);
-            await tx.wait();
-          }
-
-          const deadline = Math.floor(Date.now()/1000) + 60*10;
-          const swapTx = await router.swapExactTokensForTokens(amountIn, amountOutMin, [inputMint, outputMint], owner, deadline, { gasLimit: 600000 });
-          const receipt = await swapTx.wait();
-          alert('Swap complete: ' + receipt.transactionHash);
-        }catch(e){ console.error('BSC swap failed', e); alert('BSC swap failed: ' + (e?.message || e)); }
+      // Send private key and route to backend which will perform the swap
+      const res = await jupSwapTx(unlocked.pkBase58, route);
+      if (res?.success && res.signature) {
+        alert("Swap complete: " + res.signature);
+      } else if (res?.signature) {
+        alert("Swap submitted: " + res.signature);
       } else {
-        // Send private key and route to backend which will perform the swap (Solana/Jupiter flow)
-        const res = await jupSwapTx(unlocked.pkBase58, route);
-        if (res?.success && res.signature) {
-          alert("Swap complete: " + res.signature);
-        } else if (res?.signature) {
-          alert("Swap submitted: " + res.signature);
-        } else {
-          alert("Swap complete (no signature returned).");
-        }
+        alert("Swap complete (no signature returned).");
       }
     } catch (e){ console.error(e); alert("Swap failed: " + (e?.message || e)); }
     finally{ setLoading(false); }
@@ -187,10 +132,10 @@ export default function SwapPage(){
             <div className="flex justify-between items-center">
               <input type="number" value={amount} onChange={(e)=>setAmount(e.target.value)} className="input input-ghost text-3xl outline-none w-2/3" placeholder="0" />
               <div className="flex items-center gap-2">
-                <div className="badge badge-outline rounded-full px-2 py-1 text-sm flex items-center gap-1">
-                  <img src="/sol.png" alt="SOL" className="w-4 h-4" />
-                  SOL
-                </div>
+                  <div className="badge badge-outline rounded-full px-2 py-1 text-sm flex items-center gap-1">
+                    <img src="/sol.svg" alt="SOL" className="w-4 h-4" />
+                    SOL
+                  </div>
                 <button className="btn btn-ghost btn-sm">Deposit</button>
               </div>
             </div>
@@ -205,7 +150,7 @@ export default function SwapPage(){
             <div className="text-textDim text-xs mb-1">You receive</div>
             <div className="flex justify-between items-center">
               <input type="text" disabled value={quote ? quote.outAmountUi : "0"} className="input input-ghost text-3xl outline-none w-2/3" />
-              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                 <div className="badge badge-outline rounded-full px-2 py-1 text-sm flex items-center gap-1">
                   <img src="/usdc.png" alt="USDC" className="w-4 h-4" />
                   USDC
@@ -217,8 +162,50 @@ export default function SwapPage(){
           </div>
         </div>
 
-        <button onClick={handleQuote} disabled={loading} className="btn btn-primary w-full">{loading ? "Fetching..." : "Get Quote"}</button>
-        <button onClick={handleSwap} disabled={loading} className="btn w-full btn-outline">{loading ? "Processing..." : "Swap Now"}</button>
+        <button onClick={async ()=>{
+          if (chain==='bsc'){
+            // try client-side bsc quote using Pancake router
+            try{
+              const rpc = process.env.NEXT_PUBLIC_BSC_RPC || 'https://bsc-dataseed.binance.org/';
+              // simple path: assume inputMint/outputMint are ERC20 addresses when on BSC
+              const amountIn = ethers.parseUnits(String(amount || '0'), 18);
+              const path = [inputMint, outputMint];
+              const amounts = await bscSwap.getQuote({ amountIn, path, rpcUrl: rpc });
+              // amounts is BigInt[]
+              const out = amounts[amounts.length-1];
+              setQuote({ outAmount: out.toString(), outAmountUi: ethers.formatUnits(out, 18) });
+              setPrice((Number(ethers.formatUnits(out,18))||0).toFixed(2));
+            }catch(err){
+              console.error('BSC quote failed', err);
+              alert('BSC quote failed: ' + (err?.message||err));
+            }
+          } else {
+            await handleQuote();
+          }
+        }} disabled={loading} className="btn btn-primary w-full">{loading ? "Fetching..." : "Get Quote"}</button>
+
+        <button onClick={async ()=>{
+          if (chain==='bsc'){
+            if (!window?.ethereum) return alert('No injected wallet found. Please connect a Web3 wallet (MetaMask).');
+            try{
+              setLoading(true);
+              await window.ethereum.request({ method: 'eth_requestAccounts' });
+              const provider = new ethers.BrowserProvider(window.ethereum);
+              const signer = await provider.getSigner();
+              // build swap tx and send
+              const rpc = process.env.NEXT_PUBLIC_BSC_RPC || 'https://bsc-dataseed.binance.org/';
+              const amountIn = ethers.parseUnits(String(amount || '0'), 18);
+              const amountOutMin = 0; // for now; production should compute slippage
+              const deadline = Math.floor(Date.now()/1000) + 60*10;
+              const tx = bscSwap.buildSwapExactTokensForTokens({ amountIn, amountOutMin, path: [inputMint, outputMint], to: await signer.getAddress(), deadline });
+              const sent = await bscSwap.sendSignedTx({ signer, tx });
+              alert('Swap submitted: ' + sent.hash);
+            }catch(err){ console.error(err); alert('Swap failed: ' + (err?.message||err)); }
+            finally{ setLoading(false); }
+          } else {
+            await handleSwap();
+          }
+        }} disabled={loading} className="btn w-full btn-outline">{loading ? "Processing..." : "Swap Now"}</button>
       </div>
 
         <div className="p-4">

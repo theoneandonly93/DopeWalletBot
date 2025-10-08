@@ -33,37 +33,11 @@ export async function saveVault(password, vault) {
 export async function loadVault(password) {
   const blob = localStorage.getItem(VAULT_KEY);
   if (!blob) return null;
-  try {
-    const v = await decryptJson(password, blob);
-    return normalizeVault(v);
-  } catch (e) {
-    // If decryption failed, attempt to parse a plain JSON blob (legacy unencrypted format)
-    try {
-      const parsed = JSON.parse(blob);
-      return normalizeVault(parsed);
-    } catch (e2) {
-      return null;
-    }
-  }
+  return await decryptJson(password, blob);
 }
 
 export function getPublicKeyUnsafe() {
   const blob = localStorage.getItem(VAULT_KEY);
   if (!blob) return null;
-  try {
-    const parsed = JSON.parse(blob);
-    const pk = parsed?.pubkey || parsed?.publicKey || parsed?.address || parsed?.pubKey || parsed?.walletAddress || null;
-    return pk || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function normalizeVault(v) {
-  if (!v) return null;
-  return {
-    pubkey: v?.pubkey || v?.publicKey || v?.address || v?.pubKey || v?.walletAddress || null,
-    pkBase58: v?.pkBase58 || v?.secret || v?.privateKey || v?.pk || null,
-    raw: v,
-  };
+  try { return null; } catch { return null; }
 }

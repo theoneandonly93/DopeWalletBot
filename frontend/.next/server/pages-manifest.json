@@ -1,8 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/wallet/token/[mint]": "pages/wallet/token/[mint].js",
-  "/": "pages/index.js",
-  "/profile": "pages/profile.js"
-}
+{"/_app":"pages/_app.js","/ai":"pages/ai.html","/api/ai/generate":"pages/api/ai/generate.js","/api/balance":"pages/api/balance.js","/api/proxy":"pages/api/proxy.js","/api/swap/unified":"pages/api/swap/unified.js","/api/telegram/verify":"pages/api/telegram/verify.js","/backup":"pages/backup.html","/browser":"pages/browser.html","/":"pages/index.html","/_error":"pages/_error.js","/profile.backup":"pages/profile.backup.html","/profile":"pages/profile.html","/profile_new":"pages/profile_new.html","/settings":"pages/settings.html","/swap":"pages/swap.html","/telegram-webapp":"pages/telegram-webapp.html","/token/[mint]":"pages/token/[mint].html","/api/dex/trending":"pages/api/dex/trending.js","/api/onboarding":"pages/api/onboarding.js","/_document":"pages/_document.js","/wallet/token/[mint]":"pages/wallet/token/[mint].js","/404":"pages/404.html"}
