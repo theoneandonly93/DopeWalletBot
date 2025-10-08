@@ -9,6 +9,7 @@ import {
 } from "@solana/web3.js";
 import bs58 from "bs58";
 import nacl from "tweetnacl";
+import crypto from 'crypto';
 
 // Lazily created connection. Don't create at module import time because
 // that will throw if RPC_URL is not set or invalid (causes server-side 500s
@@ -36,17 +37,36 @@ export { getConnection };
  * Generate a new wallet (mnemonic + keypair)
  */
 export const createWallet = async () => {
-  // Dynamically import bip39 at runtime to avoid bundling it into frontend code
-  const bip39 = await import('bip39');
-  const { mnemonicToSeedSync, generateMnemonic } = bip39;
-  const mnemonic = generateMnemonic();
-  const seed = mnemonicToSeedSync(mnemonic).slice(0, 32);
-  const keypair = Keypair.fromSeed(seed);
-  return {
-    mnemonic,
-    privateKey: bs58.encode(keypair.secretKey),
-    publicKey: keypair.publicKey.toBase58(),
-  };
+  // Try to dynamically import bip39. If it fails (network, bundler, CJS/Esm
+  // mismatch), fall back to generating a secure random seed so wallet
+  // creation still works without a mnemonic. Returning a null mnemonic
+  // signals the fallback to callers.
+  try {
+    const bip39 = await import('bip39');
+    const { mnemonicToSeedSync, generateMnemonic } = bip39;
+    const mnemonic = generateMnemonic();
+    const seed = mnemonicToSeedSync(mnemonic).slice(0, 32);
+    const keypair = Keypair.fromSeed(seed);
+    return {
+      mnemonic,
+      privateKey: bs58.encode(keypair.secretKey),
+      publicKey: keypair.publicKey.toBase58(),
+    };
+  } catch (err) {
+    // If bip39 import or usage fails, produce a secure random seed and
+    // derive a Solana keypair from it. This avoids hard failures when the
+    // environment can't load bip39 (e.g., bundler tries to download it).
+    // Note: there is no mnemonic in this fallback; callers should warn
+    // users to back up the private key.
+    console.warn('bip39 import failed; falling back to random seed wallet:', err && err.message);
+    const seed = crypto.randomBytes(32);
+    const keypair = Keypair.fromSeed(seed);
+    return {
+      mnemonic: null,
+      privateKey: bs58.encode(keypair.secretKey),
+      publicKey: keypair.publicKey.toBase58(),
+    };
+  }
 };
 
 /**
