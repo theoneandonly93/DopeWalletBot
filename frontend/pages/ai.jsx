@@ -48,7 +48,7 @@ export default function AIInsights() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
+  <div className="min-h-screen flex flex-col justify-between bg-bg text-white">
       <div className="p-4">
         <h1 className="text-xl font-bold mb-4">🤖 AI Insights</h1>
         <p className="text-gray-400 mb-4">
@@ -56,7 +56,7 @@ export default function AIInsights() {
         </p>
 
         <div className="flex gap-2 mb-4">
-          <button className="btn btn-sm bg-phantom-accent text-white" onClick={triggerRefresh}>
+          <button className="btn btn-sm btn-primary text-white" onClick={triggerRefresh}>
             {loading ? "Refreshing..." : "Refresh Predictions"}
           </button>
           <p className="text-xs text-gray-400 self-center">Run the AI monitor to update suggestions.</p>
@@ -86,7 +86,7 @@ export default function AIInsights() {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      className="btn btn-xs bg-phantom-accent text-white"
+                      className="btn btn-xs btn-primary text-white"
                       onClick={() => handleQuickSwap(token.symbol)}
                     >
                       Quick Swap

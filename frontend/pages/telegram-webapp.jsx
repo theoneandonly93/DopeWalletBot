@@ -73,7 +73,7 @@ export default function TelegramWebApp() {
   };
 
   return (
-    <div className="p-4 text-white bg-phantom-bg min-h-screen">
+  <div className="p-4 text-white bg-bg min-h-screen">
       <h1 className="text-2xl font-bold">DopeWallet (Telegram)</h1>
       <p className="text-sm text-gray-300 mt-2">Open this inside Telegram to use as a wallet tab.</p>
 

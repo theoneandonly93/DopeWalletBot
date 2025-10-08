@@ -66,7 +66,7 @@ export default function App({ Component, pageProps }) {
         <link rel="apple-touch-icon" href="/logo-512.png" />
         <meta name="theme-color" content="#000000" />
       </Head>
-      <main data-theme="phantomdark">
+  <main data-theme="dopedark">
         <Splash trigger={navKey} />
         {showOnboarding && router.pathname === '/' ? (
           <Onboarding onComplete={handleOnboardingComplete} />

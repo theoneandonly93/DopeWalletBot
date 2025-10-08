@@ -6,6 +6,7 @@ import { jupQuote, jupSwapTx } from "../lib/api";
 import * as bscSwap from "../lib/bscSwap";
 import { ethers } from 'ethers';
 import { loadVault } from "../lib/wallet";
+import TxModal from '../components/TxModal';
 
 export default function SwapPage(){
   const [amount, setAmount] = useState("0");
@@ -20,6 +21,9 @@ export default function SwapPage(){
   const [tab, setTab] = useState("Most Traded");
   const [trending, setTrending] = useState([]);
   const [chain, setChain] = useState('solana');
+  const [slippage, setSlippage] = useState(1); // percent
+  const [txModal, setTxModal] = useState({ open: false, txHash: null, message: null });
+  const [useBNB, setUseBNB] = useState(false);
 
   const RPC = process.env.NEXT_PUBLIC_RPC;
 
@@ -162,6 +166,14 @@ export default function SwapPage(){
           </div>
         </div>
 
+        <div className="mt-3 flex items-center gap-2">
+          <input type="number" value={slippage} onChange={(e)=>setSlippage(Number(e.target.value||0))} className="input input-ghost w-24" />
+          <div className="text-textDim text-xs">Slippage %</div>
+          <label className="flex items-center gap-2 ml-4 text-sm">
+            <input type="checkbox" checked={useBNB} onChange={(e)=>setUseBNB(e.target.checked)} /> Use BNB
+          </label>
+        </div>
+
         <button onClick={async ()=>{
           if (chain==='bsc'){
             // try client-side bsc quote using Pancake router
@@ -169,7 +181,7 @@ export default function SwapPage(){
               const rpc = process.env.NEXT_PUBLIC_BSC_RPC || 'https://bsc-dataseed.binance.org/';
               // simple path: assume inputMint/outputMint are ERC20 addresses when on BSC
               const amountIn = ethers.parseUnits(String(amount || '0'), 18);
-              const path = [inputMint, outputMint];
+              const path = useBNB ? (useBNB && inputMint ? [bscSwap.WBNB, outputMint] : [inputMint, outputMint]) : [inputMint, outputMint];
               const amounts = await bscSwap.getQuote({ amountIn, path, rpcUrl: rpc });
               // amounts is BigInt[]
               const out = amounts[amounts.length-1];
@@ -195,17 +207,64 @@ export default function SwapPage(){
               // build swap tx and send
               const rpc = process.env.NEXT_PUBLIC_BSC_RPC || 'https://bsc-dataseed.binance.org/';
               const amountIn = ethers.parseUnits(String(amount || '0'), 18);
-              const amountOutMin = 0; // for now; production should compute slippage
+              // compute amountOutMin using slippage
+              const path = useBNB ? (useBNB && inputMint ? [bscSwap.WBNB, outputMint] : [inputMint, outputMint]) : [inputMint, outputMint];
+              const amounts = await bscSwap.getQuote({ amountIn, path, rpcUrl: rpc });
+              const out = amounts[amounts.length-1];
+              const outNum = BigInt(out.toString());
+              const sl = BigInt(Math.max(0, 100 - Number(slippage)));
+              const amountOutMin = (outNum * sl) / 100n;
               const deadline = Math.floor(Date.now()/1000) + 60*10;
-              const tx = bscSwap.buildSwapExactTokensForTokens({ amountIn, amountOutMin, path: [inputMint, outputMint], to: await signer.getAddress(), deadline });
-              const sent = await bscSwap.sendSignedTx({ signer, tx });
-              alert('Swap submitted: ' + sent.hash);
+              // Check allowance and request approve if needed
+              const owner = await signer.getAddress();
+              // If swapping native BNB -> token
+              if (useBNB && !inputMint) {
+                const txObj = bscSwap.buildSwapExactETHForTokens({ amountOutMin, path, to: await signer.getAddress(), deadline, value: amountIn });
+                setTxModal({ open: true, txHash: null, message: 'Swap submitted. Waiting for confirmation...' });
+                const sent = await bscSwap.sendSignedTx({ signer, tx: txObj });
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap broadcasted. Waiting for confirmations...' });
+                await sent.wait();
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap confirmed!' });
+              } else if (useBNB && !outputMint) {
+                // token -> BNB
+                const needApprove = await bscSwap.needsApprovalAmount({ tokenAddress: inputMint, owner, spender: bscSwap.PANCAKE_ROUTER, amount: amountIn, rpcUrl: rpc });
+                if (needApprove) {
+                  setTxModal({ open: true, txHash: null, message: 'Sending approve transaction...' });
+                  const approveTx = bscSwap.buildApproveTx({ tokenAddress: inputMint, spender: bscSwap.PANCAKE_ROUTER, amount: ethers.MaxUint256 });
+                  const approveResp = await bscSwap.sendSignedTx({ signer, tx: approveTx });
+                  setTxModal({ open: true, txHash: approveResp.hash, message: 'Approve submitted. Waiting for confirmation...' });
+                  await approveResp.wait();
+                }
+                const tx = bscSwap.buildSwapExactTokensForETH({ amountIn, amountOutMin, path, to: await signer.getAddress(), deadline });
+                setTxModal({ open: true, txHash: null, message: 'Swap submitted. Waiting for confirmation...' });
+                const sent = await bscSwap.sendSignedTx({ signer, tx });
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap broadcasted. Waiting for confirmations...' });
+                await sent.wait();
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap confirmed!' });
+              } else {
+                const needApprove = await bscSwap.needsApprovalAmount({ tokenAddress: inputMint, owner, spender: bscSwap.PANCAKE_ROUTER, amount: amountIn, rpcUrl: rpc });
+                if (needApprove) {
+                  setTxModal({ open: true, txHash: null, message: 'Sending approve transaction...' });
+                  const approveTx = bscSwap.buildApproveTx({ tokenAddress: inputMint, spender: bscSwap.PANCAKE_ROUTER, amount: ethers.MaxUint256 });
+                  const approveResp = await bscSwap.sendSignedTx({ signer, tx: approveTx });
+                  setTxModal({ open: true, txHash: approveResp.hash, message: 'Approve submitted. Waiting for confirmation...' });
+                  await approveResp.wait();
+                }
+                const tx = bscSwap.buildSwapExactTokensForTokens({ amountIn, amountOutMin, path, to: await signer.getAddress(), deadline });
+                setTxModal({ open: true, txHash: null, message: 'Swap submitted. Waiting for confirmation...' });
+                const sent = await bscSwap.sendSignedTx({ signer, tx });
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap broadcasted. Waiting for confirmations...' });
+                await sent.wait();
+                setTxModal({ open: true, txHash: sent.hash, message: 'Swap confirmed!' });
+              }
             }catch(err){ console.error(err); alert('Swap failed: ' + (err?.message||err)); }
             finally{ setLoading(false); }
           } else {
             await handleSwap();
           }
         }} disabled={loading} className="btn w-full btn-outline">{loading ? "Processing..." : "Swap Now"}</button>
+
+      <TxModal open={txModal.open} onClose={()=>setTxModal({ open:false, txHash:null, message:null })} txHash={txModal.txHash} message={txModal.message} />
       </div>
 
         <div className="p-4">

@@ -57,7 +57,7 @@ export default function Browser() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between bg-phantom-bg text-white">
+  <div className="min-h-screen flex flex-col justify-between bg-bg text-white">
       <Header />
       <div className="p-3">
         <form onSubmit={handleNav} className="flex mb-2">

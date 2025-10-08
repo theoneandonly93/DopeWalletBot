@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+const plugin = require('tailwindcss/plugin');
 module.exports = {
   content: ["./pages/**/*.{js,jsx}", "./components/**/*.{js,jsx}", "./lib/**/*.{js,jsx}"],
   theme: {
@@ -8,7 +9,6 @@ module.exports = {
         card: "#1A1A1A",
         line: "#222222",
         textDim: "#9CA3AF",
-        accent: "#8C68FF",
         success: "#16a34a",
         danger: "#ef4444",
       },
@@ -17,30 +17,12 @@ module.exports = {
       }
     },
   },
-  plugins: [],
-}
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    "./pages/**/*.{js,jsx}",
-    "./components/**/*.{js,jsx}"
-  ],
-  theme: {
-    extend: {
-      colors: {
-        phantom: {
-          bg: "#0A0A0B",
-          accent: "#8C68FF"
-        }
-      }
-    }
-  },
-  plugins: [require("daisyui")],
+  plugins: [require('daisyui')],
   daisyui: {
     themes: [
       {
-        phantomdark: {
-          primary: "#8C68FF",
+        dopedark: {
+          primary: "#3B82F6", // blue primary instead of purple
           secondary: "#2C2C2E",
           accent: "#1C1C1E",
           neutral: "#111111",

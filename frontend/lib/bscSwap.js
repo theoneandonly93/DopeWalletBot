@@ -41,6 +41,14 @@ export async function needsApproval({ tokenAddress, owner, spender, rpcUrl }) {
   return allowance === 0n;
 }
 
+export async function needsApprovalAmount({ tokenAddress, owner, spender, amount, rpcUrl }) {
+  const provider = getProvider(rpcUrl);
+  const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+  const allowance = await token.allowance(owner, spender);
+  const req = BigInt(amount.toString());
+  return allowance < req;
+}
+
 export function buildApproveTx({ tokenAddress, spender, amount = ethers.MaxUint256 }) {
   const iface = new ethers.Interface(ERC20_ABI);
   const data = iface.encodeFunctionData('approve', [spender, amount]);
@@ -51,6 +59,25 @@ export function buildSwapExactTokensForTokens({ amountIn, amountOutMin, path, to
   const iface = new ethers.Interface(ROUTER_ABI);
   const data = iface.encodeFunctionData('swapExactTokensForTokens', [amountIn, amountOutMin, path, to, deadline]);
   return { to: PANCAKE_ROUTER, data };
+}
+
+export function buildSwapExactETHForTokens({ amountOutMin, path, to, deadline, value }) {
+  const iface = new ethers.Interface(ROUTER_ABI);
+  const data = iface.encodeFunctionData('swapExactETHForTokens', [amountOutMin, path, to, deadline]);
+  return { to: PANCAKE_ROUTER, data, value };
+}
+
+export function buildSwapExactTokensForETH({ amountIn, amountOutMin, path, to, deadline }) {
+  const iface = new ethers.Interface(ROUTER_ABI);
+  const data = iface.encodeFunctionData('swapExactTokensForETH', [amountIn, amountOutMin, path, to, deadline]);
+  return { to: PANCAKE_ROUTER, data };
+}
+
+export function isNativeAddress(addr){
+  // we treat WBNB as wrapped token; use 'ETH' flag by passing null or 'BNB' in UI.
+  if (!addr) return true;
+  const low = String(addr).toLowerCase();
+  return (low === 'bnb' || low === 'eth' || low === 'native');
 }
 
 export async function sendSignedTx({ signer, tx }) {

@@ -6,7 +6,7 @@
 :root {
   --bg: #0A0A0B;
   --card: #1A1A1A;
-  --accent: #8C68FF;
+  --accent: #3B82F6;
   --text-dim: #9CA3AF;
 }
 
@@ -20,7 +20,7 @@ html, body {
   overflow-x: hidden;
 }
 
-.bg-phantom-bg { background: var(--bg); }
+.bg-bg { background: var(--bg); }
 .btn-primary { background: var(--accent); }
 .bg-card { background: var(--card); }
 .rounded-xl2 { border-radius: 1rem; }
@@ -29,4 +29,4 @@ html, body {
 
 button { transition: all 0.2s ease-in-out; }
 
-.phantom-gradient { background: radial-gradient(circle at 50% 30%, #1b133d, var(--bg) 80%); }
+.phantom-gradient { background: radial-gradient(circle at 50% 30%, #0b1220, var(--bg) 80%); }
