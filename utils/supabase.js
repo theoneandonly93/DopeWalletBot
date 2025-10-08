@@ -8,14 +8,26 @@ function getSupabaseClient() {
   if (_supabase) return _supabase;
   const url = SUPABASE_URL;
   const key = process.env.SUPABASE_KEY;
-  if (!url || !key) {
+  // Treat obvious dummy keys as missing during local development so tests and
+  // onboarding don't accidentally hit the real Supabase API when a short
+  // placeholder value is set (for example: "testing_dummy_key"). Supabase
+  // keys are JWT-like and are typically long; we consider keys shorter than
+  // 30 chars to be invalid for local dev purposes.
+  const looksLikeDummyKey = key && key.length < 30;
+  if (!url || !key || (process.env.NODE_ENV !== 'production' && looksLikeDummyKey)) {
     // Development fallback: return a harmless no-op client so local dev and
     // smoke tests can run without connecting to a real Supabase project.
     // All methods return resolved promises with null data and no error.
-    console.warn('SUPABASE_KEY missing — returning noop Supabase client for local development.');
+    if (!key) {
+      console.warn('SUPABASE_KEY missing — returning noop Supabase client for local development.');
+    } else {
+      console.warn('SUPABASE_KEY looks like a short/dummy value — returning noop Supabase client for local development.');
+    }
     const noop = {
       from: () => ({
-        upsert: async () => ({ data: null, error: null }),
+        upsert: () => ({
+          select: async () => ({ data: null, error: null }),
+        }),
         select: async () => ({ data: null, error: null }),
         eq: function () { return this; },
         single: async () => ({ data: null, error: null }),
