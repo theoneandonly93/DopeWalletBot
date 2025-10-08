@@ -23,7 +23,7 @@ export const upsertUserWallet = async (telegramId, wallet, hashedPassword) => {
 };
 
 /**
- * Get a user's wallet by Telegram ID
+ ** Get a user's wallet by Telegram ID
  */
 export const getUserWallet = async (telegramId) => {
   const { data, error } = await supabase
