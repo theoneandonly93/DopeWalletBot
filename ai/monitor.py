@@ -20,7 +20,15 @@ DEX_API_URL = os.getenv("DEX_API_URL", "https://api.dexscreener.com/token-boosts
 OPEN_AI_KEY = os.getenv("OPEN_AI_API_KEY") or os.getenv("OPENAI_API_KEY")
 MONITOR_CALL_OPENAI = os.getenv("MONITOR_CALL_OPENAI", "false").lower() in ("1", "true", "yes")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client | None = None
+if SUPABASE_KEY and len(SUPABASE_KEY) > 20:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print('[AI] Failed to create Supabase client:', e)
+        supabase = None
+else:
+    print('[AI] SUPABASE_KEY missing or too short — skipping Supabase client (local dev)')
 
 if OPEN_AI_KEY:
     print('[AI] OPEN_AI_API_KEY detected in environment')
@@ -183,10 +191,14 @@ def main(run_once=False):
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "source": source,
             }
-            try:
-                supabase.table("ai_predictions").upsert(token).execute()
-            except Exception as e:
-                print("Supabase insert error:", e)
+            if supabase:
+                try:
+                    supabase.table("ai_predictions").upsert(token).execute()
+                except Exception as e:
+                    print("Supabase insert error:", e)
+            else:
+                # Running without a Supabase key — skip persistence in local dev
+                print('[AI] Supabase not configured — skipping DB upsert for', token.get('symbol'))
         # Optionally call OpenAI to summarize the ranked tokens
         if OPEN_AI_KEY and MONITOR_CALL_OPENAI:
             try:

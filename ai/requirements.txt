@@ -1,0 +1,6 @@
+requests==2.32.4
+numpy==2.3.3
+pandas==2.2.3
+scikit-learn==1.4.2
+supabase==2.21.1
+python-dotenv==1.0.0
