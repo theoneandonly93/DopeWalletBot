@@ -17,29 +17,14 @@ export default function Home() {
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
 
-  const LOCAL_DEV = process.env.NEXT_PUBLIC_LOCAL_DEV === 'true' || process.env.NODE_ENV === 'development';
-
   useEffect(() => {
     const tg = window.Telegram?.WebApp;
     tg?.expand();
 
     const telegramId = tg?.initDataUnsafe?.user?.id;
 
-    // If running outside of the Telegram WebApp (e.g. dev), show demo data so UI is visible.
     if (!telegramId) {
-      if (LOCAL_DEV) {
-        const demoTokens = [
-          { symbol: "USDC", mint: "So11111111111111111111111111111111111111112", amount: 12.5 },
-          { symbol: "RAY", mint: "RaydiumDemoMint", amount: 3 },
-        ];
-        setWallet("DemoWalletPubKey");
-        setBalance(1.234);
-        setTokens(demoTokens);
-        setTokenPrices({ USDC: 1.0, RAY: 2.5 });
-        setLoading(false);
-        return;
-      }
-      setError("No Telegram user detected");
+      setError("No Telegram user detected. Open inside the Telegram Web App or sign in.");
       setLoading(false);
       return;
     }

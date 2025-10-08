@@ -11,25 +11,39 @@ export default function Browser() {
     const storedKey = localStorage.getItem("publicKey");
     if (storedKey) setPublicKey(storedKey);
 
-    // Inject Phantom-like provider when iframe loads
+    // Inject Phantom-like provider when iframe loads if same-origin.
     const iframe = iframeRef.current;
     const injectProvider = () => {
       if (!iframe) return;
-      const script = `
-        (() => {
-          window.solana = {
-            isPhantom: true,
-            publicKey: { toString: () => "${storedKey}" },
-            connect: () => Promise.resolve({ publicKey: "${storedKey}" }),
-            disconnect: () => Promise.resolve(),
-            signTransaction: (tx) => Promise.resolve(tx),
-            signAllTransactions: (txs) => Promise.resolve(txs),
-            signMessage: (msg) => Promise.resolve({ signature: msg }),
-          };
-          window.dispatchEvent(new Event('solana#initialized'));
-        })();
-      `;
-      iframe.contentWindow.eval(script);
+      try {
+        const iw = iframe.contentWindow;
+        // Accessing href will throw for cross-origin frames
+        // eslint-disable-next-line no-unused-expressions
+        iw.location.href;
+
+        const script = `
+          (() => {
+            window.solana = {
+              isPhantom: true,
+              publicKey: { toString: () => "${storedKey}" },
+              connect: () => Promise.resolve({ publicKey: "${storedKey}" }),
+              disconnect: () => Promise.resolve(),
+              signTransaction: (tx) => Promise.resolve(tx),
+              signAllTransactions: (txs) => Promise.resolve(txs),
+              signMessage: (msg) => Promise.resolve({ signature: msg }),
+            };
+            window.dispatchEvent(new Event('solana#initialized'));
+          })();
+        `;
+
+        // Safe to inject for same-origin
+        iw.eval(script);
+        setConnected(true);
+      } catch (err) {
+        // Cross-origin or injection blocked. Don't try to eval.
+        console.warn("Provider injection skipped (cross-origin or blocked):", err.message || err);
+        setConnected(false);
+      }
     };
 
     iframe?.addEventListener("load", injectProvider);
@@ -58,14 +72,22 @@ export default function Browser() {
         </form>
       </div>
 
-      <div className="flex-1 bg-black">
-        <iframe
-          ref={iframeRef}
-          src={url}
-          className="w-full h-full border-0"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
-        />
+      <div className="w-full bg-black p-2">
+        <div className="w-full h-[80vh] bg-black rounded-md overflow-hidden">
+          <iframe
+            ref={iframeRef}
+            src={url}
+            className="w-full h-full border-0"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
+          />
+        </div>
       </div>
+
+      {!connected && (
+        <div className="p-3 text-center text-sm text-yellow-300 bg-yellow-900/10">
+          Provider injection disabled for cross-origin sites. Open the dApp in a same-origin context to enable the injected wallet provider.
+        </div>
+      )}
 
       <Navigation active="browser" />
     </div>

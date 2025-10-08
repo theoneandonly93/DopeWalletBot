@@ -1,11 +1,13 @@
 import express from "express";
 import axios from "axios";
 import bs58 from "bs58";
-import { Connection, VersionedTransaction } from "@solana/web3.js";
+import { VersionedTransaction, Keypair } from "@solana/web3.js";
+import { getConnection } from "../utils/solana.js";
 
 const router = express.Router();
 
-const connection = new Connection(process.env.RPC_URL, "confirmed");
+// Use lazy connection
+// const connection = new Connection(process.env.RPC_URL, "confirmed");
 
 /**
  * POST /swap/quote
@@ -56,8 +58,9 @@ router.post("/execute", async (req, res) => {
     const keypair = Keypair.fromSecretKey(secretKey);
     transaction.sign([keypair]);
     const rawTransaction = transaction.serialize();
-    const txid = await connection.sendRawTransaction(rawTransaction, { skipPreflight: true });
-    await connection.confirmTransaction(txid, "confirmed");
+  const connection = getConnection();
+  const txid = await connection.sendRawTransaction(rawTransaction, { skipPreflight: true });
+  await connection.confirmTransaction(txid, "confirmed");
 
     res.json({ success: true, signature: txid });
   } catch (err) {

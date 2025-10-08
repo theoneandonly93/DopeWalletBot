@@ -9,9 +9,25 @@ export default function Swap() {
   const [quote, setQuote] = useState(null);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://dopewalletbot-production.up.railway.app";
+  useEffect(() => {
+    // try to load a quick-swap token from localStorage (set by AI page)
+    const suggested = localStorage.getItem("swapToken");
+    if (suggested) setOutputMint(suggested);
 
+    // fetch top AI suggestion to show inline
+    (async () => {
+      try {
+        const res = await axios.get(`${BACKEND_URL}/ai/predictions`);
+        const top = res.data?.[0];
+        if (top) setAiSuggestion(top);
+      } catch (err) {
+        // ignore
+      }
+    })();
+  }, []);
   const handleQuote = async () => {
     if (!amount || !outputMint) return;
     setLoading(true);
@@ -54,6 +70,22 @@ export default function Swap() {
         <h1 className="text-xl font-bold mb-4">💱 Swap Tokens</h1>
 
         <div className="card bg-neutral p-4 mb-3">
+          {aiSuggestion && (
+            <div className="mb-3 p-2 bg-secondary rounded">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-xs text-gray-400">AI suggestion</p>
+                  <p className="font-semibold">{aiSuggestion.symbol} — {aiSuggestion.mint}</p>
+                </div>
+                <div>
+                  <button
+                    className="btn btn-xs btn-outline text-white"
+                    onClick={() => setOutputMint(aiSuggestion.mint)}
+                  >Use</button>
+                </div>
+              </div>
+            </div>
+          )}
           <label className="label text-sm text-gray-400">From (SOL)</label>
           <input
             type="number"

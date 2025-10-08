@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Navigation from "@/components/Navigation";
+import Navigation from "../components/navigation";
 import { motion } from "framer-motion";
-import TokenChartModal from "@/components/TokenChartModal";
+import TokenChartModal from "../components/TokenChartModal";
 
 export default function AIInsights() {
   const [tokens, setTokens] = useState([]);
@@ -26,7 +26,23 @@ export default function AIInsights() {
     fetchPredictions();
   }, []);
 
+  const triggerRefresh = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${BACKEND_URL}/ai/refresh`);
+      // refetch
+      const res = await axios.get(`${BACKEND_URL}/ai/predictions`);
+      setTokens(res.data);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleQuickSwap = (symbol) => {
+    // store the suggested token symbol for the swap page to pick up
     localStorage.setItem("swapToken", symbol);
     window.location.href = "/swap";
   };
@@ -38,6 +54,13 @@ export default function AIInsights() {
         <p className="text-gray-400 mb-4">
           Tokens with high momentum probability based on AI monitoring.
         </p>
+
+        <div className="flex gap-2 mb-4">
+          <button className="btn btn-sm bg-phantom-accent text-white" onClick={triggerRefresh}>
+            {loading ? "Refreshing..." : "Refresh Predictions"}
+          </button>
+          <p className="text-xs text-gray-400 self-center">Run the AI monitor to update suggestions.</p>
+        </div>
 
         {loading && <p className="text-gray-400">Loading predictions...</p>}
         {error && <p className="text-red-500">{error}</p>}
@@ -98,7 +121,7 @@ export default function AIInsights() {
         />
       )}
 
-      <Navigation active="home" />
+  <Navigation active="ai" />
     </div>
   );
 }

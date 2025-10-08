@@ -15,6 +15,15 @@ function getSupabaseClient() {
   return _supabase;
 }
 
+// Export a lazy supabase instance compatible with imports like: import { supabase } from '../utils/supabase.js'
+export const supabase = {
+  from: (...args) => getSupabaseClient().from(...args),
+  rpc: (...args) => getSupabaseClient().rpc(...args),
+  auth: getSupabaseClient().auth,
+  // Provide a method to access the raw client if needed
+  _getClient: () => getSupabaseClient(),
+};
+
 /**
  * Save or update a user's wallet info
  */

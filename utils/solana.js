@@ -30,6 +30,9 @@ function getConnection() {
   return _connection;
 }
 
+// Export getConnection so routes can lazily obtain a connection when needed
+export { getConnection };
+
 /**
  * Generate a new wallet (mnemonic + keypair)
  */
