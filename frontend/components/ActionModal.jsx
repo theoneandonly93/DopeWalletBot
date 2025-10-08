@@ -12,7 +12,7 @@ export default function ActionModal({ open, type, onClose, onSubmit }) {
       <div className="bg-neutral text-white rounded-md w-[90%] max-w-md p-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold">{titleMap[type]} Token</h3>
-          <button className="btn btn-xs btn-ghost text-white" onClick={onClose}>✕</button>
+          <button className="btn btn-xs btn-ghost text-white" onClick={onClose}><span className="inline-block"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg></span></button>
         </div>
         <div className="space-y-3">
           {type !== 'receive' && (

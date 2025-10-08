@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Icon from '../components/Icon';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -17,10 +18,10 @@ export default function SettingsPage() {
         <section>
           <h2 className="text-textDim text-xs font-semibold mb-2">GENERAL SETTINGS</h2>
           <div className="divide-y divide-[#222] rounded-xl overflow-hidden border border-[#222]">
-            <button className="flex items-center justify-between p-3 w-full"><span>🔔 Notifications</span><span>›</span></button>
-            <button className="flex items-center justify-between p-3 w-full"><span>🔐 Passcode & Face ID</span><span>›</span></button>
-            <button className="flex items-center justify-between p-3 w-full"><span>🌐 Language</span><span>English ›</span></button>
-            <button className="flex items-center justify-between p-3 w-full"><span>💲 Default Currency</span><span>USD ›</span></button>
+            <button className="flex items-center justify-between p-3 w-full"><span className="flex items-center gap-3"><Icon name="Cash" size={16} />Notifications</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></button>
+            <button className="flex items-center justify-between p-3 w-full"><span className="flex items-center gap-3"><Icon name="Lock" size={16} />Passcode & Face ID</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></button>
+            <button className="flex items-center justify-between p-3 w-full"><span className="flex items-center gap-3"><Icon name="Document" size={16} />Language</span><span className="text-textDim">English <Icon name="ChevronRight" size={16} /></span></button>
+            <button className="flex items-center justify-between p-3 w-full"><span className="flex items-center gap-3"><Icon name="Cash" size={16} />Default Currency</span><span className="text-textDim">USD <Icon name="ChevronRight" size={16} /></span></button>
           </div>
         </section>
 
@@ -34,10 +35,10 @@ export default function SettingsPage() {
 
         <section>
           <div className="divide-y divide-[#222] rounded-xl overflow-hidden border border-[#222]">
-            <Link href="/backup" className="flex items-center justify-between p-3"><span>🔑 Backup & Recovery Phrase</span><span>›</span></Link>
-            <Link href="/connected-apps" className="flex items-center justify-between p-3"><span>📱 Connected Apps</span><span>›</span></Link>
-            <Link href="/my-stars" className="flex items-center justify-between p-3"><span>⭐ My Stars</span><span>›</span></Link>
-            <Link href="/version" className="flex items-center justify-between p-3"><span>💻 Version & Network</span><span>›</span></Link>
+            <Link href="/backup" className="flex items-center justify-between p-3"><span className="flex items-center gap-3"><Icon name="Lock" size={16} />Backup & Recovery Phrase</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></Link>
+            <Link href="/connected-apps" className="flex items-center justify-between p-3"><span className="flex items-center gap-3"><Icon name="Bot" size={16} />Connected Apps</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></Link>
+            <Link href="/my-stars" className="flex items-center justify-between p-3"><span className="flex items-center gap-3"><Icon name="Star" size={16} />My Stars</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></Link>
+            <Link href="/version" className="flex items-center justify-between p-3"><span className="flex items-center gap-3"><Icon name="Document" size={16} />Version & Network</span><span className="text-textDim"><Icon name="ChevronRight" size={16} /></span></Link>
           </div>
         </section>
 

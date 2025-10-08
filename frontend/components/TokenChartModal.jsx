@@ -37,7 +37,7 @@ export default function TokenChartModal({ token, onClose }) {
           className="absolute top-2 right-2 btn btn-sm btn-error text-white"
           onClick={onClose}
         >
-          ✕
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </button>
         <div className="card-body">
           <h2 className="text-xl font-semibold mb-2">{token.symbol}</h2>

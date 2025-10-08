@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import Icon from './Icon';
 
 export default function BottomNav(){
   const r = useRouter();
@@ -15,35 +16,7 @@ export default function BottomNav(){
     : path.startsWith('/browser')
     ? 'browser'
     : 'wallet';
-  const Icon = ({name, active}) => {
-    const stroke = active ? 'white' : 'rgba(255,255,255,0.6)';
-    const size = 18;
-    if (name === 'Wallet') return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <rect x="2" y="6" width="20" height="12" rx="2" stroke={stroke} strokeWidth="1.6" fill="none" />
-        <path d="M16 10h2v2" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-    if (name === 'Swap') return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <path d="M4 7h11l-3-3" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M20 17H9l3 3" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-    if (name === 'Profile') return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <circle cx="12" cy="8" r="3" stroke={stroke} strokeWidth="1.6" fill="none" />
-        <path d="M4 20c1.5-4 6-6 8-6s6.5 2 8 6" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      </svg>
-    );
-    // Browser / Compass
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <circle cx="12" cy="12" r="9" stroke={stroke} strokeWidth="1.6" fill="none" />
-        <path d="M9 15l6-3-3 6-3-3z" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      </svg>
-    );
-  };
+  // Use shared Icon component (icons use stroke="currentColor")
 
   const Item = ({ href, label, active }) => {
     const handleNav = (e) => {
@@ -56,7 +29,7 @@ export default function BottomNav(){
       try { r.push(href); } catch (err) { window.location.href = href; }
     };
     return (
-        <div
+      <div
         role="button"
         tabIndex={0}
         onClick={handleNav}
@@ -64,9 +37,8 @@ export default function BottomNav(){
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleNav(); } }}
         className={`flex flex-col items-center text-xs px-3 py-3 touch-manipulation w-20 ${active?"text-white":"text-textDim"} cursor-pointer`}
       >
-        {/* Removed circular bg container so icon is shown inline without a rounded background */}
         <div className="flex items-center justify-center p-0">
-          <Icon name={label} active={active} />
+          <Icon name={label} size={20} className="" />
         </div>
         <div className="mt-1 text-[11px] select-none">{label}</div>
       </div>

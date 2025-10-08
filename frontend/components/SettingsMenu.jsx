@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import Icon from './Icon';
 
 export default function SettingsMenu({ onClose }) {
   return (
@@ -25,24 +26,24 @@ export default function SettingsMenu({ onClose }) {
 
           <div className="divide-y divide-[#222]">
             <Link href="/settings" className="flex items-center justify-between py-3">
-              <span>⚙️ Settings</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Settings" size={18} />Settings</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </Link>
             <a href="https://t.me/dopewalletbot" target="_blank" rel="noreferrer" className="flex items-center justify-between py-3">
-              <span>🤖 Open Bot</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Bot" size={18} />Open Bot</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </a>
             <button onClick={() => window.location.reload()} className="flex items-center justify-between py-3 w-full">
-              <span>🔄 Reload Page</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Reload" size={18} />Reload Page</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </button>
             <Link href="/terms" className="flex items-center justify-between py-3">
-              <span>📄 Terms of Use</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Document" size={18} />Terms of Use</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </Link>
             <Link href="/privacy" className="flex items-center justify-between py-3">
-              <span>🔒 Privacy Policy</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Lock" size={18} />Privacy Policy</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </Link>
             <button onClick={() => {
               // sign out: clear flag and notify app
@@ -51,12 +52,12 @@ export default function SettingsMenu({ onClose }) {
               // force a soft reload to ensure state resets
               window.location.reload();
             }} className="flex items-center justify-between py-3 text-sm w-full">
-              <span>🔓 Sign out</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Unlock" size={18} />Sign out</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </button>
             <button className="flex items-center justify-between py-3 text-red-500 w-full">
-              <span>🗑 Remove from Menu</span>
-              <span>›</span>
+              <span className="flex items-center gap-3"><Icon name="Trash" size={18} />Remove from Menu</span>
+              <span className="text-textDim"><Icon name="ChevronRight" size={18} /></span>
             </button>
           </div>
 

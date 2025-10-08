@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import BottomNav from '../components/BottomNav';
+import Icon from '../components/Icon';
+import TokenList from '../components/TokenList';
+import { loadVault, getPublicKeyUnsafe } from '../lib/wallet';
 
 export default function Home() {
   const [vault, setVault] = useState(null);
@@ -15,20 +18,34 @@ export default function Home() {
   const addressBtnRef = useRef(null);
 
   useEffect(() => {
-    // load a readable vault view (do not decrypt here)
-    try {
-      const blob = localStorage.getItem('DW_VAULT_V1');
-      if (blob) {
-        try {
-          const parsed = JSON.parse(blob);
-          setVault({ pubkey: parsed?.pubkey || parsed?.address || null });
-        } catch (e) {
-          setVault({ pubkey: null });
+    // Try to decrypt/load the saved vault if we have a cached password, otherwise
+    // fall back to a lightweight parse of the stored blob (for older unencrypted data).
+    let mounted = true;
+    (async () => {
+      try {
+        const pw = localStorage.getItem('DW_LAST_PW');
+        if (pw) {
+          try {
+            const v = await loadVault(pw);
+            if (v && mounted) {
+              setVault(v);
+              return;
+            }
+          } catch (e) {
+            // decryption failed, fall back below
+          }
         }
+
+        // Fallback: try the unsafe public key extractor (handles legacy/plain blobs)
+        try {
+          const pk = getPublicKeyUnsafe();
+          if (pk && mounted) { setVault({ pubkey: pk }); }
+        } catch (e) {}
+      } catch (e) {
+        // ignore
       }
-    } catch (e) {
-      // ignore
-    }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   function showToast(msg, ms = 2500) {
@@ -40,14 +57,17 @@ export default function Home() {
     <div className="min-h-screen bg-[#0D0D0D] text-white pb-20">
       {/* header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#1A1A1A]">
-        <button type="button" onClick={() => window.history.back()} className="text-[#3B82F6] font-semibold text-sm">Close</button>
+        <div />
         <div className="text-center">
-          <h1 className="text-base font-semibold">Wallet <span className="text-[#3B82F6]">✓</span></h1>
-          <p className="text-[11px] text-[#999] -mt-1">mini app</p>
+          <h1 className="text-base font-semibold">Wallet</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => showToast('QR scan not implemented yet')} className="p-2 rounded-md" aria-label="Scan QR">🔍</button>
-          <button type="button" onClick={() => showToast('Menu')} className="p-2 rounded-md">•••</button>
+        <div>
+          <button onClick={() => window.location.href = '/settings'} className="w-8 h-8 rounded-full overflow-hidden">
+            {/* simple avatar: initials from pubkey */}
+            <div className="w-8 h-8 flex items-center justify-center bg-[#1F2937] text-white text-xs font-semibold">
+              {vault?.pubkey ? String(vault.pubkey).slice(0,2).toUpperCase() : 'U'}
+            </div>
+          </button>
         </div>
       </div>
 
@@ -60,15 +80,15 @@ export default function Home() {
 
         <div className="grid grid-cols-3 gap-3">
           <button type="button" onClick={() => setShowTransfer(true)} onTouchEnd={() => setShowTransfer(true)} className="flex flex-col items-center bg-[#111] rounded-xl py-3 touch-manipulation">
-            <span className="text-xl mb-1">⇄</span>
+            <span className="text-xl mb-1"><Icon name="Transfer" size={20} /></span>
             <p className="text-xs font-medium">Transfer</p>
           </button>
           <button type="button" onClick={() => setShowDeposit(true)} onTouchEnd={() => setShowDeposit(true)} className="flex flex-col items-center bg-[#111] rounded-xl py-3 touch-manipulation">
-            <span className="text-xl mb-1">＋</span>
+            <span className="text-xl mb-1"><Icon name="Plus" size={20} /></span>
             <p className="text-xs font-medium">Deposit</p>
           </button>
           <button type="button" onClick={() => setShowWithdraw(true)} onTouchEnd={() => setShowWithdraw(true)} className="flex flex-col items-center bg-[#111] rounded-xl py-3 touch-manipulation">
-            <span className="text-xl mb-1">⬆</span>
+            <span className="text-xl mb-1"><Icon name="Upload" size={20} /></span>
             <p className="text-xs font-medium">Withdraw</p>
           </button>
         </div>
@@ -80,7 +100,7 @@ export default function Home() {
         <div className="bg-[#111] rounded-2xl border border-[#222]">
           <button type="button" onClick={() => showToast('Get SOL flow')} className="w-full flex items-center justify-between p-4">
             <div className="flex items-center space-x-3">
-              <div className="bg-green-500/20 rounded-full p-3 text-lg">💵</div>
+              <div className="bg-green-500/20 rounded-full p-3 text-lg"><Icon name="Cash" size={18} /></div>
               <div>
                 <p className="font-semibold text-sm">Get your first SOL</p>
               </div>
@@ -93,42 +113,18 @@ export default function Home() {
       {/* tokens */}
       <div className="mt-6 px-4">
         <h2 className="text-xs text-[#888] mb-2 font-semibold tracking-wide">TOKENS</h2>
-        <div className="bg-[#111] rounded-2xl border border-[#222] divide-y divide-[#222]">
-          <div className="flex justify-between items-center p-3">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#007AFF] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">S</div>
-              <div>
-                <p className="text-sm font-semibold">Solana</p>
-                <p className="text-xs text-[#999]">$150.30 <span className="text-red-500 text-[11px]">↓2.14%</span></p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold">$0.00</p>
-              <p className="text-xs text-[#999]">0 SOL</p>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center p-3">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#15BD5C] w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold">U</div>
-              <div>
-                <p className="text-sm font-semibold">USDC</p>
-                <p className="text-xs text-[#999]">$1.00</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold">$0.00</p>
-              <p className="text-xs text-[#999]">0 USDC</p>
-            </div>
-          </div>
-        </div>
+        {/* Use TokenList so rows are clickable and navigate to /token/[symbol] or /token/[mint] */}
+        <TokenList tokens={(tokens && tokens.length) ? tokens : [
+          { symbol: 'SOL', name: 'Solana', logoURI: 'https://cryptologos.cc/logos/solana-sol-logo.png', price: 150.30, volume24h: 123456, address: 'So11111111111111111111111111111111111111112' },
+          { symbol: 'USDC', name: 'USDC', logoURI: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png', price: 1.00, volume24h: 98765, address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' }
+        ]} chain={chain} />
       </div>
 
       {/* earning assets */}
       <div className="mt-6 px-4">
         <div className="bg-[#111] rounded-2xl border border-[#222] p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="bg-green-500/20 rounded-full p-3 text-lg">%</div>
+            <div className="bg-green-500/20 rounded-full p-3 text-lg"><Icon name="Percent" size={18} /></div>
             <div>
               <p className="font-semibold text-sm">Earning Assets <span className="bg-[#3B82F6] text-xs px-2 py-[2px] rounded-md ml-1">NEW</span></p>
               <p className="text-xs text-[#aaa]">Get rewards for holding crypto</p>
@@ -144,7 +140,7 @@ export default function Home() {
         <div className="bg-[#111] rounded-2xl border border-[#222] divide-y divide-[#222]">
           <div className="flex items-center justify-between p-3">
             <div className="flex items-center space-x-3">
-              <div className="bg-white/10 w-7 h-7 rounded-full flex items-center justify-center">👻</div>
+              <div className="bg-white/10 w-7 h-7 rounded-full flex items-center justify-center"><Icon name="Ghost" size={16} /></div>
               <div>
                 <p className="text-sm font-semibold">You created DopeWallet</p>
                 <p className="text-xs text-[#999]">October 8 at 12:44 AM</p>

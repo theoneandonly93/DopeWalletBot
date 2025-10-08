@@ -37,8 +37,16 @@ export default function TokenList({ tokens = [], chain = 'solana' }) {
     const tokenChain = (t.chain || chain || 'solana').toString().toLowerCase();
     const [src, setSrc] = useState(imgSrc);
 
-    const target = t.address || t.tokenAddress || t.id || null;
-    const href = target ? `/token/${encodeURIComponent(target)}` : null;
+  // Prefer mint-based wallet route when an on-chain address exists (wallet view), otherwise use symbol-based price page
+  const hasOnchain = t.address || t.tokenAddress || t.mint || t.id;
+  const symbolRoute = t.symbol || t.tokenSymbol || (t.raw && t.raw.symbol) || null;
+  let href = null;
+  if (hasOnchain) {
+    const mint = t.address || t.tokenAddress || t.mint || t.id;
+    href = `/wallet/token/${encodeURIComponent(mint)}`;
+  } else if (symbolRoute) {
+    href = `/token/${encodeURIComponent(String(symbolRoute).toUpperCase())}`;
+  }
 
     const row = (
       <div className="flex items-center justify-between py-3 border-b border-[#222] last:border-0 hover:bg-[#121214] px-2 rounded">
@@ -66,7 +74,7 @@ export default function TokenList({ tokens = [], chain = 'solana' }) {
 
     if (href) {
       return (
-        <Link key={target || displaySymbol} href={href} className="w-full block">
+        <Link key={(href) || displaySymbol} href={href} className="w-full block">
           {row}
         </Link>
       );
